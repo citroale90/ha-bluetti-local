@@ -1,0 +1,19 @@
+BLUETTI Local Wi-Fi
+
+Derived in part from BLUETTI Integration for Home Assistant 1.0.5:
+https://github.com/bluetti-official/bluetti-home-assistant
+Copyright (c) 2025 Bluetti. Distributed under the MIT license in LICENSE.
+
+The official BluettiState/BluettiDevice callback model, numeric sensor structure,
+function codes and icon mapping are adapted in models.py, sensor.py,
+binary_sensor.py, const.py and icon_config.py. Source hashes are recorded in
+provenance.json. The local edition uses a distinct bluetti_local integration domain.
+
+The read-only EL30V2 Wi-Fi transport, register decoder, local configuration flow,
+freshness checks and tests are modifications/additions by the BLUETTI Local Wi-Fi
+contributors, distributed under the same MIT license.
+
+Background protocol research for a different device, the AC300:
+https://tvdr.de/bluetti-monitor/
+The EL30V2 framing, register mapping and direct MQTT handshake were independently
+validated with an owner's device. No code from that AC300 implementation is included.

@@ -1,0 +1,45 @@
+{
+  "title": "BLUETTI Local Wi-Fi",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect BLUETTI on your local network",
+        "description": "Verified read-only support for Elite 30 V2 (EL30V2). The UPS must reach this receiver and the router must direct only the BLUETTI data connection here. Reserve the UPS IP address in DHCP. Sensors become unavailable after 90 seconds without a valid sample. No cloud account or Bluetooth is required.",
+        "data": {
+          "name": "Device name",
+          "device_ip": "UPS IPv4 address",
+          "serial": "UPS serial number without EL30V2",
+          "listen_host": "Home Assistant local IPv4 address",
+          "listen_port": "Receiver port",
+          "dns_port": "UPS local DNS port"
+        }
+      }
+    },
+    "error": {
+      "invalid_config": "Check local IP addresses, serial number, name and port.",
+      "port_already_configured": "This local receiver port is already configured."
+    },
+    "abort": {
+      "already_configured": "This UPS is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BLUETTI local connection",
+        "description": "Changes reconnect only the local receiver. Update the router rule if you change its address or port.",
+        "data": {
+          "name": "Device name",
+          "device_ip": "UPS IPv4 address",
+          "listen_host": "Home Assistant local IPv4 address",
+          "listen_port": "Receiver port",
+          "dns_port": "UPS local DNS port"
+        }
+      }
+    },
+    "error": {
+      "invalid_config": "Check local IP addresses and port.",
+      "port_already_configured": "This receiver port is already configured."
+    }
+  }
+}

@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.DS_Store
+*.pcap
+*.pcapng
+*.log
+.env
+secrets.yaml
+.storage/
+dist/
+local-settings.json

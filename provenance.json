@@ -1,0 +1,13 @@
+{
+  "base": "BLUETTI official Home Assistant integration",
+  "base_version": "1.0.5",
+  "source": "https://github.com/bluetti-official/bluetti-home-assistant",
+  "license": "MIT",
+  "original_copyright": "2025 Bluetti",
+  "adapted_source_sha256": {
+    "models.py": "c8f10ea078d23312c4ebf905970977bb63ea1f516e61e4d1827207a5ff36cbf4",
+    "sensor.py": "823a1b35246bda586e6cd82faf551bf0149cc6ef9aa58d0b33b78aa8cdaebfb5",
+    "icon_config.py": "5e0436a5a9775436680fede5a2392baa600a85f0a2d0a6f8bc92a7fbe35c4493",
+    "const.py": "7ea38d6f4e1489ef139f7f4954d7627b93fd2a4a02eeef00b44b421531fefce0"
+  }
+}

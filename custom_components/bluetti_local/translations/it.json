@@ -1,0 +1,45 @@
+{
+  "title": "BLUETTI Local Wi-Fi",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Collega BLUETTI sulla rete locale",
+        "description": "Supporto verificato per Elite 30 V2 (EL30V2), in sola lettura. Il ricevitore deve essere raggiungibile dall’UPS e il router deve indirizzare qui il solo collegamento dati Bluetti. Usa una prenotazione DHCP per l’UPS. Le letture diventano non disponibili se mancano dati validi per 90 secondi. Account cloud e Bluetooth non sono necessari.",
+        "data": {
+          "name": "Nome dispositivo",
+          "device_ip": "Indirizzo IPv4 dell’UPS",
+          "serial": "Numero di serie dell’UPS, senza EL30V2",
+          "listen_host": "Indirizzo IPv4 locale di Home Assistant",
+          "listen_port": "Porta del ricevitore",
+          "dns_port": "Porta DNS locale dell’UPS"
+        }
+      }
+    },
+    "error": {
+      "invalid_config": "Controlla indirizzi locali, numero di serie, nome e porta.",
+      "port_already_configured": "Questa porta locale è già usata da un’altra voce dell’integrazione."
+    },
+    "abort": {
+      "already_configured": "Questo UPS è già configurato."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Collegamento locale BLUETTI",
+        "description": "Le modifiche riconnettono soltanto il ricevitore locale. Aggiorna anche l’eventuale regola del router se cambi indirizzo o porta.",
+        "data": {
+          "name": "Nome dispositivo",
+          "device_ip": "Indirizzo IPv4 dell’UPS",
+          "listen_host": "Indirizzo IPv4 locale di Home Assistant",
+          "listen_port": "Porta del ricevitore",
+          "dns_port": "Porta DNS locale dell’UPS"
+        }
+      }
+    },
+    "error": {
+      "invalid_config": "Controlla gli indirizzi locali e la porta.",
+      "port_already_configured": "Questa porta locale è già configurata."
+    }
+  }
+}
