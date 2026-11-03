@@ -16,6 +16,10 @@ CONF_NETWORK_MODE = "network_mode"
 CONF_INTERFACE = "interface"
 NETWORK_MANUAL = "manual"
 NETWORK_AUTOMATIC = "automatic"
+NETWORK_DIRECT = "direct_dns"
+CONF_DNS_SOURCE = "dns_source"
+DNS_BUILTIN = "builtin"
+DNS_EXTERNAL = "external"
 
 # Function codes are kept from the official entity model where applicable.
 SENSORS = (

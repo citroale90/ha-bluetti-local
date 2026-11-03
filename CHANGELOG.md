@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 — 2026-11-03 (preview)
+
+- Close accepted MQTT/DNS clients before waiting for listeners, preventing reload/shutdown stalls with an active connection.
+- Direct DNS mode for a separate HA host, using an existing resolver or an UPS-only built-in DNS listener on port 53.
+- Guided DNS setup without router privileges; MQTT remains embedded in the integration.
+- No additional Internet filter or permanent firewall/DNS changes.
+- Runtime-only lifecycle: stop/reload/disable/remove cleans up routing tables, with serialized removal and cancellation handling. No startup rules or external runtime service.
+- 82 isolated tests and real kernel tests of separate-host DNS/MQTT and scoped router redirects; physical-device Direct DNS validation remains pending.
+
+
 ## 0.2.1 — 2026-11-03 (preview)
 
 - Explicit Home Assistant stop cleanup also covers setup cancelled before its background verification starts.

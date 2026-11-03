@@ -84,15 +84,16 @@ class _Datagrams(asyncio.DatagramProtocol):
     def datagram_received(self, data, addr):
         if addr[0] != self.owner.device_ip:
             return
-        response = answer(data, BROKER_ROUTING_ADDRESS)
+        response = answer(data, self.owner.answer_address)
         if response is not None:
             self.transport.sendto(response, addr)
             self.owner.answers += 1
 
 
 class LocalDNS:
-    def __init__(self, host, port, device_ip):
+    def __init__(self, host, port, device_ip, answer_address=BROKER_ROUTING_ADDRESS):
         self.host, self.port, self.device_ip = host, port, device_ip
+        self.answer_address = str(ipaddress.IPv4Address(answer_address))
         self._udp = None
         self._tcp = None
         self._tasks = set()
@@ -117,13 +118,14 @@ class LocalDNS:
             await asyncio.sleep(0)
         if self._tcp:
             self._tcp.close()
-            await self._tcp.wait_closed()
-            self._tcp = None
         tasks = tuple(self._tasks)
         for task in tasks:
             task.cancel()
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+        if self._tcp:
+            await self._tcp.wait_closed()
+            self._tcp = None
 
     async def _client(self, reader, writer):
         peer = writer.get_extra_info("peername")
@@ -137,7 +139,7 @@ class LocalDNS:
                 if not 12 <= size <= MAX_DNS_PACKET:
                     break
                 data = await asyncio.wait_for(reader.readexactly(size), 3)
-                response = answer(data, BROKER_ROUTING_ADDRESS)
+                response = answer(data, self.answer_address)
                 if response is None:
                     break
                 writer.write(struct.pack(">H", len(response)) + response)

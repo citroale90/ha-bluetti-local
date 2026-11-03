@@ -11,7 +11,7 @@ from homeassistant.core import callback
 
 from .models import BluettiDevice
 from .protocol import Protocol, MAX_PACKET
-from .local_dns import LocalDNS
+from .local_dns import LocalDNS, BROKER_ROUTING_ADDRESS
 from .const import DEFAULT_DNS_PORT, STALE_SECONDS
 
 _LOGGER = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ SAMPLE_TIMEOUT_SECONDS = STALE_SECONDS
 
 
 class LocalReceiver:
-    def __init__(self, hass, device: BluettiDevice, listen_host: str, port: int, device_ip: str, dns_port: int = DEFAULT_DNS_PORT):
+    def __init__(self, hass, device: BluettiDevice, listen_host: str, port: int, device_ip: str, dns_port: int = DEFAULT_DNS_PORT, *, direct_dns=False, external_dns=False):
         self.hass = hass
         self.device = device
         self.listen_host = listen_host
@@ -33,14 +33,16 @@ class LocalReceiver:
         self.rejected_connections = 0
         self.protocol_errors = 0
         self.telemetry_reconnects = 0
-        self.dns = LocalDNS(listen_host, dns_port, device_ip)
+        self.dns = None if external_dns else LocalDNS(listen_host, dns_port, device_ip, listen_host if direct_dns else BROKER_ROUTING_ADDRESS)
+        self.direct_dns = direct_dns
 
     async def start(self):
         self._server = await asyncio.start_server(
             self._client, self.listen_host, self.port, limit=MAX_PACKET
         )
         try:
-            await self.dns.start()
+            if self.dns:
+                await self.dns.start()
         except Exception:
             self._server.close()
             await self._server.wait_closed()
@@ -59,14 +61,13 @@ class LocalReceiver:
 
     async def stop(self):
         self._stopping = True
-        await self.dns.stop()
+        if self.dns:
+            await self.dns.stop()
         if self._remove_freshness_check:
             self._remove_freshness_check()
             self._remove_freshness_check = None
         if self._server:
             self._server.close()
-            await self._server.wait_closed()
-            self._server = None
         if self._writer:
             self._writer.close()
         tasks = tuple(self._tasks)
@@ -74,6 +75,11 @@ class LocalReceiver:
             task.cancel()
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+        if self._server:
+            # Python 3.13+ waits for accepted transports too: close clients
+            # before waiting, otherwise a live UPS can stall reload/shutdown.
+            await self._server.wait_closed()
+            self._server = None
         self.device.disconnect()
 
     async def _client(self, reader, writer):
@@ -149,5 +155,7 @@ class LocalReceiver:
             "telemetry_reconnects": self.telemetry_reconnects,
             "rejected_connections": self.rejected_connections,
             "read_only": True,
-            "local_dns_answers": self.dns.answers,
+            "local_dns_answers": self.dns.answers if self.dns else 0,
+            "dns_source": "builtin" if self.dns else "external",
+            "dns_answer_mode": "receiver_address" if self.direct_dns else "router_redirect",
         }

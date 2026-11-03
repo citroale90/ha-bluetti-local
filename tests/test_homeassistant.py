@@ -7,7 +7,7 @@ import socket
 import tempfile
 import unittest
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from homeassistant.core import HomeAssistant, HassJob
 from homeassistant.config_entries import ConfigEntries
@@ -201,3 +201,46 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
             self.hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
             await self.hass.async_block_till_done()
             manager.stop.assert_awaited_once()
+
+    async def test_direct_dns_with_external_resolver_needs_no_router_privileges(self):
+        self.config.update(network_mode='direct_dns',listen_port=18760)
+        with patch('custom_components.bluetti_local.config_flow.capabilities') as caps,patch('custom_components.bluetti_local.config_flow.RouterRules') as rules:
+            flow=await self.hass.config_entries.flow.async_init(DOMAIN,context={'source':'user'},data=self.config)
+            self.assertEqual(flow['step_id'],'direct_dns')
+            bad=await self.hass.config_entries.flow.async_configure(flow['flow_id'],{'dns_source':'external','confirm_dns':False})
+            self.assertEqual(bad['errors']['base'],'direct_dns_confirmation_required')
+            done=await self.hass.config_entries.flow.async_configure(flow['flow_id'],{'dns_source':'external','confirm_dns':True})
+            self.assertEqual(done['type'],'create_entry')
+            await self.hass.async_block_till_done()
+            self.entry=self.hass.config_entries.async_entries(DOMAIN)[0]
+            self.assertIsNone(self.entry.runtime_data.router)
+            self.assertIsNone(self.entry.runtime_data.receiver.dns)
+            self.assertEqual(self.entry.runtime_data.receiver.diagnostics['dns_answer_mode'],'receiver_address')
+            caps.assert_not_called();rules.assert_not_called()
+        _,writer=await self.connect();await self.send_sample(writer)
+        self.assertTrue(self.entry.runtime_data.device.online)
+
+    async def test_direct_dns_rejects_nonstandard_mqtt_port(self):
+        flow=await self.hass.config_entries.flow.async_init(DOMAIN,context={'source':'user'},data={**self.config,'network_mode':'direct_dns','listen_port':18888})
+        self.assertEqual(flow['type'],'form');self.assertEqual(flow['errors']['base'],'invalid_config')
+
+    async def test_direct_dns_builtin_selects_standard_dns_port(self):
+        self.config.update(network_mode='direct_dns',listen_port=18760)
+        with patch('custom_components.bluetti_local.LocalReceiver') as receiver:
+            receiver.return_value.start=AsyncMock();receiver.return_value.stop=AsyncMock()
+            flow=await self.hass.config_entries.flow.async_init(DOMAIN,context={'source':'user'},data=self.config)
+            done=await self.hass.config_entries.flow.async_configure(flow['flow_id'],{'dns_source':'builtin','confirm_dns':True})
+            self.assertEqual(done['type'],'create_entry')
+            await self.hass.async_block_till_done()
+            self.assertEqual(receiver.call_args.args[5],53)
+            self.assertTrue(receiver.call_args.kwargs['direct_dns']);self.assertFalse(receiver.call_args.kwargs['external_dns'])
+            # Keep the patch active during unload, so fake diagnostic fields do not leak.
+            entry=self.hass.config_entries.async_entries(DOMAIN)[0]
+            await self.hass.config_entries.async_unload(entry.entry_id)
+
+    async def test_reload_with_live_mqtt_session_closes_client_before_waiting(self):
+        await self.setup_entry();reader,writer=await self.connect();await self.send_sample(writer)
+        self.assertTrue(await asyncio.wait_for(self.hass.config_entries.async_reload(self.entry.entry_id),2))
+        self.assertEqual(await asyncio.wait_for(reader.read(1),1),b'')
+        _,new_writer=await self.connect();await self.send_sample(new_writer,2)
+        self.assertTrue(self.entry.runtime_data.device.online)

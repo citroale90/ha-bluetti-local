@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Collega BLUETTI sulla rete locale",
-        "description": "Telemetria locale in sola lettura per Elite 30 V2. Scegli Automatico se Home Assistant gira sul router Linux dell’UPS con i permessi di rete necessari; il plugin gestisce direttamente tre regole limitate all’UPS. Scegli Manuale per mantenere le regole già configurate. Usa un IP riservato in DHCP. Nessun account cloud o Bluetooth.",
+        "description": "Monitoraggio locale in sola lettura. Automatica: Home Assistant sul router Linux. DNS diretto: collegamento LAN tramite DNS locale, anche con Home Assistant su un host separato; richiede la configurazione DNS/DHCP del router. Manuale: conserva il percorso esistente. Nessun account cloud o Bluetooth.",
         "data": {
           "name": "Nome dispositivo",
           "device_ip": "Indirizzo IPv4 dell’UPS",
@@ -17,10 +17,18 @@
       },
       "network": {
         "title": "Configura la rete del solo UPS",
-        "description": "Verranno gestite direttamente dal plugin tre regole per {device_ip} verso {receiver_ip}, in una tabella dedicata. Conferma soltanto se Home Assistant gira sul router usato dall’UPS. Il plugin può riconnettere il solo canale dati e ripristina le nuove regole se non riceve due letture valide entro tre minuti. Non modifica alimentazione, uscite AC/DC, DNS degli altri dispositivi o regole esistenti. Non serve un servizio aggiuntivo.",
+        "description": "Home Assistant deve funzionare sul router Linux dell’UPS. Crea tre reindirizzamenti del solo {device_ip} verso {receiver_ip}. Servono due letture nuove entro tre minuti. Arresto, ricarica, disattivazione o rimozione eliminano le sue regole. Nessun blocco Internet permanente o comando AC/DC.",
         "data": {
           "interface": "Interfaccia LAN da cui arriva l’UPS",
-          "confirm": "Confermo la topologia e autorizzo le tre regole del solo UPS"
+          "confirm": "Confermo la topologia e le regole limitate al solo UPS"
+        }
+      },
+      "direct_dns": {
+        "title": "DNS diretto e collegamento LAN",
+        "description": "Il Bluetti {device_ip} deve risolvere i quattro nomi BLUETTI verso {receiver_ip} e collegarsi alla porta 18760. Scegli un DNS locale esistente o il DNS integrato sulla porta 53. Quello integrato risponde solo all’UPS: assegnalo via DHCP soltanto a questo dispositivo, senza proxy DNS del router. Con un DNS esterno crea le riscritture per iot.bluettipower.com, gw.bluettipower.com, gwpry.bluettipower.com e iotde.bluettipower.com. Il ricevitore MQTT è nel plugin. Nessun blocco Internet permanente viene creato.",
+        "data": {
+          "dns_source": "Origine DNS",
+          "confirm_dns": "Ho predisposto DNS e DHCP per collegare il solo UPS al ricevitore locale"
         }
       }
     },
@@ -32,7 +40,8 @@
       "nftables_unavailable": "Il kernel non rende disponibile nftables in questo ambiente.",
       "kernel_too_old": "La gestione automatica richiede Linux 4.18 o successivo.",
       "network_confirmation_required": "Serve la conferma esplicita delle regole e della topologia.",
-      "invalid_router_network": "Controlla l’interfaccia LAN e l’indirizzo locale del ricevitore."
+      "invalid_router_network": "Controlla l’interfaccia LAN e l’indirizzo locale del ricevitore.",
+      "direct_dns_confirmation_required": "Conferma prima la configurazione DNS/DHCP."
     },
     "abort": {
       "already_configured": "Questo UPS è già configurato."
@@ -42,7 +51,7 @@
     "step": {
       "init": {
         "title": "Collegamento locale BLUETTI",
-        "description": "La modalità Automatica gestisce il percorso del solo UPS dentro questo plugin, con verifica delle letture e ripristino. Passare a Manuale rimuove soltanto le regole create dal plugin; eventuali regole esterne restano da gestire sul router.",
+        "description": "Monitoraggio locale in sola lettura. Automatica: Home Assistant sul router Linux. DNS diretto: collegamento LAN tramite DNS locale, anche con Home Assistant su un host separato; richiede la configurazione DNS/DHCP del router. Manuale: conserva il percorso esistente. Nessun account cloud o Bluetooth.",
         "data": {
           "name": "Nome dispositivo",
           "device_ip": "Indirizzo IPv4 dell’UPS",
@@ -54,10 +63,18 @@
       },
       "network": {
         "title": "Configura la rete del solo UPS",
-        "description": "Verranno gestite direttamente dal plugin tre regole per {device_ip} verso {receiver_ip}, in una tabella dedicata. Conferma soltanto se Home Assistant gira sul router usato dall’UPS. Il plugin può riconnettere il solo canale dati e ripristina le nuove regole se non riceve due letture valide entro tre minuti. Non modifica alimentazione, uscite AC/DC, DNS degli altri dispositivi o regole esistenti. Non serve un servizio aggiuntivo.",
+        "description": "Home Assistant deve funzionare sul router Linux dell’UPS. Crea tre reindirizzamenti del solo {device_ip} verso {receiver_ip}. Servono due letture nuove entro tre minuti. Arresto, ricarica, disattivazione o rimozione eliminano le sue regole. Nessun blocco Internet permanente o comando AC/DC.",
         "data": {
           "interface": "Interfaccia LAN da cui arriva l’UPS",
-          "confirm": "Confermo la topologia e autorizzo le tre regole del solo UPS"
+          "confirm": "Confermo la topologia e le regole limitate al solo UPS"
+        }
+      },
+      "direct_dns": {
+        "title": "DNS diretto e collegamento LAN",
+        "description": "Il Bluetti {device_ip} deve risolvere i quattro nomi BLUETTI verso {receiver_ip} e collegarsi alla porta 18760. Scegli un DNS locale esistente o il DNS integrato sulla porta 53. Quello integrato risponde solo all’UPS: assegnalo via DHCP soltanto a questo dispositivo, senza proxy DNS del router. Con un DNS esterno crea le riscritture per iot.bluettipower.com, gw.bluettipower.com, gwpry.bluettipower.com e iotde.bluettipower.com. Il ricevitore MQTT è nel plugin. Nessun blocco Internet permanente viene creato.",
+        "data": {
+          "dns_source": "Origine DNS",
+          "confirm_dns": "Ho predisposto DNS e DHCP per collegare il solo UPS al ricevitore locale"
         }
       }
     },
@@ -69,14 +86,22 @@
       "nftables_unavailable": "Il kernel non rende disponibile nftables in questo ambiente.",
       "kernel_too_old": "La gestione automatica richiede Linux 4.18 o successivo.",
       "network_confirmation_required": "Serve la conferma esplicita delle regole e della topologia.",
-      "invalid_router_network": "Controlla l’interfaccia LAN e l’indirizzo locale del ricevitore."
+      "invalid_router_network": "Controlla l’interfaccia LAN e l’indirizzo locale del ricevitore.",
+      "direct_dns_confirmation_required": "Conferma prima la configurazione DNS/DHCP."
     }
   },
   "selector": {
     "network_mode": {
       "options": {
         "manual": "Manuale — regole già configurate",
-        "automatic": "Automatico — Home Assistant sul router Linux"
+        "automatic": "Automatico — Home Assistant sul router Linux",
+        "direct_dns": "DNS diretto — Home Assistant separato dal router"
+      }
+    },
+    "dns_source": {
+      "options": {
+        "external": "DNS locale esistente — Pi-hole / AdGuard Home / router",
+        "builtin": "DNS integrato — porta 53, assegnato al solo UPS"
       }
     }
   }

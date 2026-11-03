@@ -78,9 +78,30 @@ class DNSSocketTests(unittest.IsolatedAsyncioTestCase):
         self.server.device_ip='127.0.0.2'
         reader,writer=await asyncio.open_connection('127.0.0.1',self.port)
         self.assertEqual(await asyncio.wait_for(reader.read(1),1),b'')
+
+    async def test_direct_dns_answers_receiver_address_without_nat(self):
+        self.server.answer_address='127.0.0.1'
+        reader,writer=await asyncio.open_connection('127.0.0.1',self.port)
+        data=query('gwpry.bluettipower.com');writer.write(struct.pack('>H',len(data))+data);await writer.drain()
+        size=struct.unpack('>H',await reader.readexactly(2))[0]
+        response=await reader.readexactly(size)
+        self.assertEqual(response[-4:],socket.inet_aton('127.0.0.1'))
         writer.close();await writer.wait_closed()
 
     async def test_stop_releases_both_protocols(self):
         await self.server.stop()
         for kind in (socket.SOCK_STREAM,socket.SOCK_DGRAM):
             with socket.socket(socket.AF_INET,kind) as s:s.bind(('127.0.0.1',self.port))
+
+    async def test_stop_with_open_tcp_client_does_not_wait_for_read_timeout(self):
+        reader,writer=await asyncio.open_connection('127.0.0.1',self.port)
+        try:
+            await asyncio.sleep(0)
+            await asyncio.wait_for(self.server.stop(),.5)
+            self.assertEqual(await asyncio.wait_for(reader.read(1),1),b'')
+            for kind in (socket.SOCK_STREAM,socket.SOCK_DGRAM):
+                with socket.socket(socket.AF_INET,kind) as s:
+                    if kind==socket.SOCK_STREAM:s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+                    s.bind(('127.0.0.1',self.port))
+        finally:
+            writer.close();await writer.wait_closed()

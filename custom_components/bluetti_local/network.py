@@ -21,9 +21,13 @@ class RouterManager:
         self.phase = "starting"
         self.error = None
         self._new_rules = False
+        self._removed = False
+        self._remove_on_cancel = True
+        self._remove_lock = asyncio.Lock()
 
     async def start(self):
         result = await self._apply()
+        self._removed = False
         self._new_rules = result["changed"]
         self.phase = "verifying"
         baseline = self.device.valid_samples
@@ -36,8 +40,15 @@ class RouterManager:
         except asyncio.CancelledError:
             result = await pending
             if result['changed']:
-                await self.hass.async_add_executor_job(self.rules.remove)
+                await self._remove_rules()
             raise
+
+    async def _remove_rules(self):
+        async with self._remove_lock:
+            if not self._removed:
+                await self.hass.async_add_executor_job(self.rules.remove)
+                self._removed = True
+                self._new_rules = False
 
     async def _run(self, baseline):
         try:
@@ -55,8 +66,7 @@ class RouterManager:
                 await asyncio.sleep(2)
             else:
                 if self._new_rules:
-                    await self.hass.async_add_executor_job(self.rules.remove)
-                    self._new_rules = False
+                    await self._remove_rules()
                     self.phase = "rolled_back"
                 else:
                     self.phase = "unverified"
@@ -79,39 +89,34 @@ class RouterManager:
                             break
                         await asyncio.sleep(2)
                     else:
-                        await self.hass.async_add_executor_job(self.rules.remove)
-                        self._new_rules = False
+                        await self._remove_rules()
                         self.phase = "rolled_back"
                         self.error = "no_fresh_samples"
                         return
         except asyncio.CancelledError:
-            if self._new_rules:
-                await self.hass.async_add_executor_job(self.rules.remove)
-                self._new_rules = False
+            if self._remove_on_cancel or self._new_rules:
+                await self._remove_rules()
             raise
         except (NetworkError, OSError):
             self.phase = "error"
             self.error = "router_rules_unavailable"
             if self._new_rules:
                 try:
-                    await self.hass.async_add_executor_job(self.rules.remove)
-                    self._new_rules = False
+                    await self._remove_rules()
                     self.phase = "rolled_back"
                 except (NetworkError, OSError):
                     pass
             _LOGGER.warning("Cannot verify the integration's dedicated router rules")
 
-    async def stop(self, *, remove=False):
+    async def stop(self, *, remove=True):
+        self._remove_on_cancel = remove
         if self.task:
             self.task.cancel()
             with suppress(asyncio.CancelledError):
                 await self.task
             self.task = None
-        # Keep verified rules across HA restarts/reloads to avoid switching cloud
-        # sessions. New, unverified rules are always rolled back on cancellation.
         if remove or self._new_rules:
-            await self.hass.async_add_executor_job(self.rules.remove)
-            self._new_rules = False
+            await self._remove_rules()
 
     @property
     def diagnostics(self):

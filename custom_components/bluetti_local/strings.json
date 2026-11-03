@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Connect BLUETTI on your local network",
-        "description": "Read-only local telemetry for Elite 30 V2. Choose Automatic when Home Assistant runs on the UPS’s Linux router with network administration permission: the integration manages three UPS-only rules itself. Choose Manual to keep existing router configuration. Reserve the UPS IP in DHCP. No cloud account or Bluetooth.",
+        "description": "Read-only local monitoring. Automatic: Home Assistant on the Linux router. Direct DNS: LAN connection through local DNS, including a separate Home Assistant host; requires router DNS/DHCP setup. Manual: keep the existing router path. No cloud account or Bluetooth.",
         "data": {
           "name": "Device name",
           "device_ip": "UPS IPv4 address",
@@ -17,10 +17,18 @@
       },
       "network": {
         "title": "Configure this UPS’s network",
-        "description": "The integration will manage three rules for {device_ip} to {receiver_ip} in its own table. Confirm only if Home Assistant runs on the router used by the UPS. It may reconnect only the data channel and rolls back new rules if two valid reports do not arrive within three minutes. UPS power, AC/DC outputs, other clients’ DNS and existing firewall rules stay untouched. No additional service is required.",
+        "description": "Home Assistant must run on the UPS’s Linux router. Three redirects are scoped to {device_ip} and {receiver_ip}. Two fresh reports are required within three minutes. Stop, reload, disable or removal deletes its rules. No permanent Internet block or AC/DC commands.",
         "data": {
           "interface": "Incoming UPS LAN interface",
-          "confirm": "I confirm the topology and authorise the three UPS-only rules"
+          "confirm": "I confirm the topology and UPS-only rules"
+        }
+      },
+      "direct_dns": {
+        "title": "Direct DNS and LAN connection",
+        "description": "UPS {device_ip} must resolve the four BLUETTI names to {receiver_ip} and connect on port 18760. Choose an existing local resolver or built-in DNS on port 53. The built-in listener serves only this UPS: assign it only to that device via DHCP, without a router DNS proxy. With an external resolver, rewrite iot.bluettipower.com, gw.bluettipower.com, gwpry.bluettipower.com and iotde.bluettipower.com. The MQTT receiver is inside the integration. No permanent Internet block is created.",
+        "data": {
+          "dns_source": "DNS source",
+          "confirm_dns": "I configured DNS/DHCP so this UPS connects to the local receiver"
         }
       }
     },
@@ -32,7 +40,8 @@
       "nftables_unavailable": "The kernel nftables interface is unavailable in this environment.",
       "kernel_too_old": "Automatic routing requires Linux 4.18 or later.",
       "network_confirmation_required": "Explicit confirmation of the topology and rules is required.",
-      "invalid_router_network": "Check the incoming interface and local receiver address."
+      "invalid_router_network": "Check the incoming interface and local receiver address.",
+      "direct_dns_confirmation_required": "Confirm the DNS/DHCP configuration first."
     },
     "abort": {
       "already_configured": "This UPS is already configured."
@@ -42,7 +51,7 @@
     "step": {
       "init": {
         "title": "BLUETTI local connection",
-        "description": "Automatic mode manages this UPS’s routing inside the integration, with telemetry verification and rollback. Switching to Manual removes only rules created by the integration; existing external rules remain managed by your router.",
+        "description": "Read-only local monitoring. Automatic: Home Assistant on the Linux router. Direct DNS: LAN connection through local DNS, including a separate Home Assistant host; requires router DNS/DHCP setup. Manual: keep the existing router path. No cloud account or Bluetooth.",
         "data": {
           "name": "Device name",
           "device_ip": "UPS IPv4 address",
@@ -54,10 +63,18 @@
       },
       "network": {
         "title": "Configure this UPS’s network",
-        "description": "The integration will manage three rules for {device_ip} to {receiver_ip} in its own table. Confirm only if Home Assistant runs on the router used by the UPS. It may reconnect only the data channel and rolls back new rules if two valid reports do not arrive within three minutes. UPS power, AC/DC outputs, other clients’ DNS and existing firewall rules stay untouched. No additional service is required.",
+        "description": "Home Assistant must run on the UPS’s Linux router. Three redirects are scoped to {device_ip} and {receiver_ip}. Two fresh reports are required within three minutes. Stop, reload, disable or removal deletes its rules. No permanent Internet block or AC/DC commands.",
         "data": {
           "interface": "Incoming UPS LAN interface",
-          "confirm": "I confirm the topology and authorise the three UPS-only rules"
+          "confirm": "I confirm the topology and UPS-only rules"
+        }
+      },
+      "direct_dns": {
+        "title": "Direct DNS and LAN connection",
+        "description": "UPS {device_ip} must resolve the four BLUETTI names to {receiver_ip} and connect on port 18760. Choose an existing local resolver or built-in DNS on port 53. The built-in listener serves only this UPS: assign it only to that device via DHCP, without a router DNS proxy. With an external resolver, rewrite iot.bluettipower.com, gw.bluettipower.com, gwpry.bluettipower.com and iotde.bluettipower.com. The MQTT receiver is inside the integration. No permanent Internet block is created.",
+        "data": {
+          "dns_source": "DNS source",
+          "confirm_dns": "I configured DNS/DHCP so this UPS connects to the local receiver"
         }
       }
     },
@@ -69,14 +86,22 @@
       "nftables_unavailable": "The kernel nftables interface is unavailable in this environment.",
       "kernel_too_old": "Automatic routing requires Linux 4.18 or later.",
       "network_confirmation_required": "Explicit confirmation of the topology and rules is required.",
-      "invalid_router_network": "Check the incoming interface and local receiver address."
+      "invalid_router_network": "Check the incoming interface and local receiver address.",
+      "direct_dns_confirmation_required": "Confirm the DNS/DHCP configuration first."
     }
   },
   "selector": {
     "network_mode": {
       "options": {
         "manual": "Manual — router already configured",
-        "automatic": "Automatic — Home Assistant on Linux router"
+        "automatic": "Automatic — Home Assistant on Linux router",
+        "direct_dns": "Direct DNS — Home Assistant on a separate host"
+      }
+    },
+    "dns_source": {
+      "options": {
+        "external": "Existing local DNS — Pi-hole / AdGuard Home / router",
+        "builtin": "Built-in DNS — port 53, assigned only to this UPS"
       }
     }
   }

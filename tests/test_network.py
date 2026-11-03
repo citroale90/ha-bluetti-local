@@ -99,12 +99,12 @@ class RouterLifecycleTests(unittest.IsolatedAsyncioTestCase):
         self.device.online=True;self.device.valid_samples=10
         await self.manager.start();await self.manager.task
         self.assertEqual(self.manager.phase,'rolled_back')
-    async def test_two_new_reports_confirm_and_stop_preserves_when_requested(self):
+    async def test_two_new_reports_confirm_and_stop_removes_runtime_rules(self):
         await self.manager.start();self.changed=False
         self.device.online=True;self.device.valid_samples=2
         await self.real_sleep(.01)
         self.assertEqual(self.manager.phase,'verified')
-        await self.manager.stop();self.assertEqual(self.removed,0)
+        await self.manager.stop();self.assertEqual(self.removed,1)
     async def test_cancel_pending_verification_rolls_back(self):
         await self.manager.start();await self.manager.stop()
         self.assertEqual(self.removed,1)
@@ -114,6 +114,13 @@ class RouterLifecycleTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(asyncio.CancelledError):await self.manager.task
         self.assertEqual(self.removed,1)
         self.assertFalse(self.manager._new_rules)
+    async def test_direct_task_cancellation_removes_confirmed_rules(self):
+        await self.manager.start();self.changed=False
+        self.device.online=True;self.device.valid_samples=2
+        await self.real_sleep(.01);self.assertEqual(self.manager.phase,'verified')
+        self.manager.task.cancel()
+        with self.assertRaises(asyncio.CancelledError):await self.manager.task
+        self.assertEqual(self.removed,1)
     async def test_existing_rules_are_not_removed_when_no_change_was_made(self):
         self.changed=False;await self.manager.start();await self.manager.task
         self.assertEqual(self.manager.phase,'unverified');self.assertEqual(self.removed,0)

@@ -25,7 +25,7 @@ The component starts listeners, applies an atomic ruleset and waits for two **ne
 
 After 20 seconds without new reports, a newly configured automatic entry may expire at most four connection-tracking entries matching exactly the UPS source IPv4 and TCP destination port 18760. This allows a cached cloud connection to be re-evaluated through the local route. No global connection flush, forced Wi-Fi disconnect, power command or new background service is used.
 
-Switch to **Manual**, disable or remove the entry to remove its owned rules. Verified rules survive a complete HA shutdown so a restart does not deliberately switch the UPS back to cloud; unverified changes are still rolled back. The entry recreates missing rules on startup. Remove the entry before uninstalling its files.
+Stop, reload, disable or remove the entry to remove its owned rules, including verified rules. Home Assistant stopping no longer preserves the redirects. No permanent startup rule is installed. The component cannot clean up after a forced process kill; inspect/remove only its verified owned tables or restart the host if this occurs. Remove the entry before uninstalling its files.
 
 If migrating an existing manual configuration, keep its backup and remove the exact old UPS-only rules **after** automatic mode has been verified. The component deliberately does not delete external rules; otherwise switching it off would leave those external redirects active. Do not flush shared tables or stop the networking container.
 
@@ -101,3 +101,9 @@ sudo iptables -t nat -X BLUETTI_LOCAL
 Only the newly created, dedicated example chain is flushed. Do not flush PREROUTING, INPUT, FORWARD or the NAT table. Remove the equivalent persistent rules from your normal firewall configuration as well, then unload/reload the integration so its current local socket closes. The UPS can resume its original route; no cached private receiver address is left by the local DNS service.
 
 The receiver exposes no AC/DC or power-control commands. Host shutdown automation and UPS output control are outside this repository.
+
+## Direct DNS instead of router redirects
+
+See the Direct DNS instructions in both READMEs. Existing resolvers can rewrite the four names to the HA host. Alternatively, built-in DNS binds UDP/TCP 53 and is assigned only to the UPS via a dedicated DHCP setting. Never use that restricted listener as the whole LAN resolver. Direct mode uses fixed TCP port 18760 and requires neither DNAT nor NET_ADMIN. DNS rewrites alone do not block unrelated Internet traffic.
+
+`sudo unshare --net python3 tools/test-linux-offline.py` tests a synthetic UPS, a separate HA host, another LAN client and an isolated WAN. It checks actual direct DNS/MQTT, reconnection, unrelated-client access and ordinary IPv4/IPv6 UDP/TCP traffic remaining available. No physical UPS, production LAN or Internet is accessed.

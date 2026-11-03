@@ -15,7 +15,8 @@ from .models import BluettiDevice
 from .server import LocalReceiver
 from .network import RouterManager
 from .netfilter import RouterRules
-from .const import CONF_NETWORK_MODE, NETWORK_AUTOMATIC, NETWORK_MANUAL
+from .const import (CONF_NETWORK_MODE, NETWORK_AUTOMATIC, NETWORK_MANUAL, NETWORK_DIRECT,
+                    CONF_DNS_SOURCE, DNS_EXTERNAL)
 
 PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
 
@@ -30,7 +31,9 @@ class BluettiData:
 async def async_setup_entry(hass, entry: ConfigEntry) -> bool:
     config = {**entry.data, **entry.options}
     device = BluettiDevice(config[CONF_SERIAL], config[CONF_NAME])
-    receiver = LocalReceiver(hass, device, config[CONF_LISTEN_HOST], config[CONF_LISTEN_PORT], config[CONF_DEVICE_IP], config.get(CONF_DNS_PORT, DEFAULT_DNS_PORT))
+    direct=config.get(CONF_NETWORK_MODE)==NETWORK_DIRECT
+    receiver = LocalReceiver(hass, device, config[CONF_LISTEN_HOST], config[CONF_LISTEN_PORT], config[CONF_DEVICE_IP], config.get(CONF_DNS_PORT, DEFAULT_DNS_PORT),
+                             direct_dns=direct,external_dns=direct and config.get(CONF_DNS_SOURCE)==DNS_EXTERNAL)
     try:
         await receiver.start()
     except OSError as exc:
@@ -42,12 +45,12 @@ async def async_setup_entry(hass, entry: ConfigEntry) -> bool:
             entry.runtime_data.router = manager
             await manager.start()
             async def stop_router(event):
-                await manager.stop()
+                await manager.stop(remove=True)
             entry.async_on_unload(hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, stop_router))
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     except Exception:
         if entry.runtime_data.router:
-            await entry.runtime_data.router.stop()
+            await entry.runtime_data.router.stop(remove=True)
         await receiver.stop()
         raise
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
@@ -66,7 +69,7 @@ async def _async_options_updated(hass, entry):
 async def async_unload_entry(hass, entry):
     if await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         if entry.runtime_data.router:
-            await entry.runtime_data.router.stop(remove=not hass.is_stopping)
+            await entry.runtime_data.router.stop(remove=True)
         await entry.runtime_data.receiver.stop()
         return True
     return False

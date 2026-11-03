@@ -4,7 +4,7 @@
 
 Read-only, local Wi-Fi telemetry for the **BLUETTI Elite 30 V2 (EL30V2)**. No cloud account or Bluetooth connection is required by this integration. It is derived in part from the official BLUETTI integration, with a separate `bluetti_local` domain and an independently implemented local transport.
 
-**Preview release 0.2.1.** Tested with EL30V2 IoT firmware **8024.14** and Home Assistant **2026.10.4**. Other models, firmware versions and regions have not been validated. Long-term reliability over days or weeks has not yet been established. This is an independent project, not an official BLUETTI product.
+**Preview release 0.3.0.** Tested with EL30V2 IoT firmware **8024.14** and Home Assistant **2026.10.4**. Other models, firmware versions and regions have not been validated. Long-term reliability over days or weeks has not yet been established. This is an independent project, not an official BLUETTI product.
 
 ## What it provides
 
@@ -43,11 +43,24 @@ The receiver starts before the rules. Two new CRC-checked reports must arrive wi
 
 The setup flow checks privileges and the local listening address before applying anything. HACS cannot grant kernel privileges or configure a separate router. Automatic mode is therefore **not universal plug-and-play**: on unsupported installations choose **Manual**, which preserves the previous behavior and uses rules configured on your router. See the [network guide](docs/network.md).
 
-Switching an automatic entry to Manual, disabling it or removing it deletes only its own unchanged table. Rules are kept during a full Home Assistant shutdown and recognised again on startup; new, unverified rules are rolled back even on cancellation. Uninstall the integration entry before deleting its files. Previously installed manual rules are not silently adopted or deleted.
+Stopping, reloading, disabling or removing the integration deletes its owned rules, including verified rules. Cancelling the background task cleans up its policy too. No startup firewall block is installed. Automatic mode retains the original vendor address in DNS answers, allowing the UPS to attempt its original route after redirects are removed. A forced process termination that cannot run cleanup may leave rules in the kernel until explicit cleanup or host restart. External manual rules remain independent.
 
 The validated topology runs Home Assistant Container with host networking on a Linux router. A separate Home Assistant host or Docker bridge network may require additional routing or SNAT; these topologies have not been validated. Do not apply the example unchanged to them.
 
 A data socket is also closed after 90 seconds without a new complete report, even if MQTT keepalives continue. Only the data session reconnects; no UPS output or power action is performed.
+
+## Direct DNS with a stock router
+
+Choose **Direct DNS** to receive MQTT on a separate Home Assistant host without router DNAT or NET_ADMIN. Reserve the UPS/receiver addresses; the receiver must be reachable on TCP **18760**.
+
+- **External DNS:** configure an existing local resolver to rewrite the four observed BLUETTI gateway/broker names below to the Home Assistant IPv4 address. Ensure these names do not retain cloud AAAA answers. No built-in DNS socket is opened. Scope rewrites to this UPS where supported; global rewrites may affect other BLUETTI units.
+- **Built-in DNS:** the component listens on UDP/TCP **53** and returns its local receiver address. The port must be free, bindable and reachable from the LAN. Assign this DNS **only to the UPS**, using a per-device DHCP setting. It only serves that source address and those four names: do not assign it as the whole home's DNS or put a router DNS proxy in front of it.
+
+The integration does not reconfigure an arbitrary router's DHCP/DNS. Confirm those settings in its guided flow, then verify two fresh complete reports. No external MQTT broker is needed. Home Assistant OS/container networking and DNS-port exposure still require checking; HACS cannot grant privileges or publish ports.
+
+External DNS rewrites survive unloading the integration. Cloud fallback while HA is off depends on those settings and the UPS cache, and is not guaranteed by Direct DNS. This integration does not impose a general Internet block.
+
+A separate-host, direct-DNS topology passed real DNS/MQTT and reconnection checks in isolated Linux namespaces. Physical EL30V2 validation uses Automatic mode; Direct DNS on the physical UPS has not yet been validated.
 
 ## Reconnection and offline operation
 
@@ -61,7 +74,7 @@ While local routing is enabled, the BLUETTI cloud app may show the device offlin
 
 ## Validated behavior and limits
 
-The original transport passed 53 isolated integration tests and real telemetry checks. Version 0.2.1 passes **75 isolated integration tests**, plus a real Linux namespace test of UDP/TCP DNS, MQTT routing, client isolation, idempotence, scoped connection expiry and rule removal. Live validation on 3 November confirmed automatic mode, fresh real UPS readings after removal of the old manual rules, and successful integration reload. The tests cover framing, CRC, incomplete/replayed/stale reports, socket reconnection, local DNS and Home Assistant entity lifecycle. No UPS output change or power-loss test was performed.
+The original transport passed 53 isolated integration tests and real telemetry checks. Version 0.3.0 passes **82 isolated integration tests**, plus a real Linux namespace test of UDP/TCP DNS, MQTT routing, client isolation, idempotence, scoped connection expiry and rule removal. Live validation on 3 November confirmed automatic mode, fresh real UPS readings after removal of the old manual rules, and successful integration reload. The tests cover framing, CRC, incomplete/replayed/stale reports, socket reconnection, local DNS and Home Assistant entity lifecycle. No UPS output change or power-loss test was performed.
 
 Existing automations must use the new entity identifiers or be migrated explicitly. Missing/stale readings are unavailable, not zero battery or proof of a blackout. This repository does not include a host shutdown watchdog or the separate Bluetooth library fixes.
 

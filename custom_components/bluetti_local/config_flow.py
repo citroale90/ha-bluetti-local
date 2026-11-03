@@ -12,7 +12,8 @@ from homeassistant.helpers import selector
 
 from .const import (DOMAIN, MODEL, DEFAULT_PORT, DEFAULT_DNS_PORT, CONF_DNS_PORT,
                     CONF_DEVICE_IP, CONF_LISTEN_HOST, CONF_LISTEN_PORT, CONF_NAME, CONF_SERIAL,
-                    CONF_NETWORK_MODE, CONF_INTERFACE, NETWORK_MANUAL, NETWORK_AUTOMATIC)
+                    CONF_NETWORK_MODE, CONF_INTERFACE, NETWORK_MANUAL, NETWORK_AUTOMATIC,
+                    NETWORK_DIRECT, CONF_DNS_SOURCE, DNS_BUILTIN, DNS_EXTERNAL)
 from .netfilter import NetworkError, RouterRules, capabilities
 
 
@@ -36,12 +37,31 @@ def validate_config(data):
         raise ValueError("Receiver port outside supported range")
     result[CONF_LISTEN_PORT] = port
     dns_port = int(result.get(CONF_DNS_PORT, DEFAULT_DNS_PORT))
-    if not 1024 <= dns_port <= 65535 or dns_port == port:
+    mode=result.get(CONF_NETWORK_MODE, NETWORK_MANUAL)
+    if not (1024 <= dns_port <= 65535 or (mode==NETWORK_DIRECT and dns_port==53)) or dns_port == port:
         raise ValueError("Invalid or conflicting local DNS port")
     result[CONF_DNS_PORT] = dns_port
-    if result.get(CONF_NETWORK_MODE, NETWORK_MANUAL) not in (NETWORK_MANUAL, NETWORK_AUTOMATIC):
+    if mode not in (NETWORK_MANUAL, NETWORK_AUTOMATIC, NETWORK_DIRECT):
         raise ValueError("Unsupported network mode")
+    if mode==NETWORK_DIRECT and port!=DEFAULT_PORT:
+        raise ValueError("Direct MQTT requires the firmware's port 18760")
     return result
+
+
+def receiver_ports(data):
+    ports={data[CONF_LISTEN_PORT]}
+    if not (data.get(CONF_NETWORK_MODE)==NETWORK_DIRECT and data.get(CONF_DNS_SOURCE)==DNS_EXTERNAL):
+        ports.add(data.get(CONF_DNS_PORT,DEFAULT_DNS_PORT))
+    return ports
+
+
+def conflicting_entry(flow,data):
+    current=getattr(flow,'config_entry',None)
+    for entry in flow.hass.config_entries.async_entries(DOMAIN):
+        if current and entry.entry_id==current.entry_id:continue
+        other={**entry.data,**entry.options}
+        if other[CONF_LISTEN_HOST]==data[CONF_LISTEN_HOST] and receiver_ports(other)&receiver_ports(data):return True
+    return False
 
 
 def schema(defaults=None, include_serial=True):
@@ -51,9 +71,9 @@ def schema(defaults=None, include_serial=True):
         vol.Required(CONF_DEVICE_IP, description={"suggested_value": defaults.get(CONF_DEVICE_IP, "")}): str,
         vol.Required(CONF_LISTEN_HOST, description={"suggested_value": defaults.get(CONF_LISTEN_HOST, "")}): str,
         vol.Required(CONF_LISTEN_PORT, default=defaults.get(CONF_LISTEN_PORT, DEFAULT_PORT)): vol.All(vol.Coerce(int), vol.Range(min=1024, max=65535)),
-        vol.Required(CONF_DNS_PORT, default=defaults.get(CONF_DNS_PORT, DEFAULT_DNS_PORT)): vol.All(vol.Coerce(int), vol.Range(min=1024, max=65535)),
+        vol.Required(CONF_DNS_PORT, default=defaults.get(CONF_DNS_PORT, DEFAULT_DNS_PORT)): vol.Any(53,vol.All(vol.Coerce(int),vol.Range(min=1024,max=65535))),
         vol.Optional(CONF_NETWORK_MODE, default=defaults.get(CONF_NETWORK_MODE, NETWORK_MANUAL)): selector.SelectSelector(
-            selector.SelectSelectorConfig(options=[NETWORK_MANUAL, NETWORK_AUTOMATIC], translation_key="network_mode")),
+            selector.SelectSelectorConfig(options=[NETWORK_MANUAL, NETWORK_AUTOMATIC, NETWORK_DIRECT], translation_key="network_mode")),
     }
     if include_serial:
         fields[vol.Required(CONF_SERIAL, description={"suggested_value": defaults.get(CONF_SERIAL, "")})] = str
@@ -74,11 +94,10 @@ class BluettiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 await self.async_set_unique_id(f"{MODEL}_{data[CONF_SERIAL]}")
                 self._abort_if_unique_id_configured()
-                for entry in self._async_current_entries():
-                    other = {**entry.data, **entry.options}
-                    if other[CONF_LISTEN_HOST] == data[CONF_LISTEN_HOST] and {other[CONF_LISTEN_PORT], other.get(CONF_DNS_PORT, DEFAULT_DNS_PORT)} & {data[CONF_LISTEN_PORT], data[CONF_DNS_PORT]}:
-                        errors["base"] = "port_already_configured"
-                        break
+                if data.get(CONF_NETWORK_MODE)==NETWORK_DIRECT:
+                    self._pending=data
+                    return await self.async_step_direct_dns()
+                if conflicting_entry(self,data):errors['base']='port_already_configured'
                 if not errors:
                     if data.get(CONF_NETWORK_MODE) == NETWORK_AUTOMATIC:
                         self._pending = data
@@ -88,6 +107,9 @@ class BluettiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_network(self, user_input=None):
         return await network_step(self, user_input, options=False)
+
+    async def async_step_direct_dns(self,user_input=None):
+        return await direct_dns_step(self,user_input,options=False)
 
     @staticmethod
     @callback
@@ -105,13 +127,10 @@ class BluettiOptionsFlow(config_entries.OptionsFlow):
             except (ValueError, TypeError, KeyError):
                 errors["base"] = "invalid_config"
             else:
-                for entry in self.hass.config_entries.async_entries(DOMAIN):
-                    if entry.entry_id == self.config_entry.entry_id:
-                        continue
-                    other = {**entry.data, **entry.options}
-                    if other[CONF_LISTEN_HOST] == data[CONF_LISTEN_HOST] and {other[CONF_LISTEN_PORT], other.get(CONF_DNS_PORT, DEFAULT_DNS_PORT)} & {data[CONF_LISTEN_PORT], data[CONF_DNS_PORT]}:
-                        errors["base"] = "port_already_configured"
-                        break
+                if data.get(CONF_NETWORK_MODE)==NETWORK_DIRECT:
+                    self._pending=data
+                    return await self.async_step_direct_dns()
+                if conflicting_entry(self,data):errors['base']='port_already_configured'
                 if not errors:
                     if data.get(CONF_NETWORK_MODE) == NETWORK_AUTOMATIC:
                         self._pending = data
@@ -121,6 +140,29 @@ class BluettiOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_network(self, user_input=None):
         return await network_step(self, user_input, options=True)
+
+    async def async_step_direct_dns(self,user_input=None):
+        return await direct_dns_step(self,user_input,options=True)
+
+
+async def direct_dns_step(flow,user_input,*,options):
+    errors={}
+    if user_input is not None:
+        source=user_input.get(CONF_DNS_SOURCE)
+        if source not in (DNS_BUILTIN,DNS_EXTERNAL):errors['base']='invalid_config'
+        elif user_input.get('confirm_dns') is not True:errors['base']='direct_dns_confirmation_required'
+        else:
+            data={**flow._pending,CONF_DNS_SOURCE:source,CONF_DNS_PORT:53 if source==DNS_BUILTIN else DEFAULT_DNS_PORT}
+            if conflicting_entry(flow,data):errors['base']='port_already_configured'
+            else:
+                return flow.async_create_entry(title='' if options else data[CONF_NAME],data={k:v for k,v in data.items() if not options or k!=CONF_SERIAL})
+    defaults={**flow._pending,**(user_input or {})}
+    fields=vol.Schema({
+        vol.Required(CONF_DNS_SOURCE,default=defaults.get(CONF_DNS_SOURCE,DNS_EXTERNAL)):selector.SelectSelector(selector.SelectSelectorConfig(options=[DNS_EXTERNAL,DNS_BUILTIN],translation_key='dns_source')),
+        vol.Required('confirm_dns',default=False):bool,
+    })
+    return flow.async_show_form(step_id='direct_dns',data_schema=fields,errors=errors,
+        description_placeholders={'device_ip':flow._pending[CONF_DEVICE_IP],'receiver_ip':flow._pending[CONF_LISTEN_HOST]})
 
 
 async def network_step(flow, user_input, *, options):

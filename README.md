@@ -8,7 +8,7 @@ Il dominio `bluetti_local` è indipendente da `bluetti` e `bluetti_bt`. La disin
 
 ## Stato del lavoro
 
-Versione **0.2.1 in anteprima**. Il protocollo è stato verificato su EL30V2 con firmware IoT 8024.14: acquisizione passiva, confronto con la mappa registri e prova diretta del ricevitore. Il collaudo dell’integrazione completa in Home Assistant e la verifica di stabilità prolungata sono registrati separatamente dai test del solo protocollo.
+Versione **0.3.0 in anteprima**. Il protocollo è stato verificato su EL30V2 con firmware IoT 8024.14: acquisizione passiva, confronto con la mappa registri e prova diretta del ricevitore. Il collaudo dell’integrazione completa in Home Assistant e la verifica di stabilità prolungata sono registrati separatamente dai test del solo protocollo.
 
 Il supporto di altri modelli BLUETTI richiede prove e mappe registri dedicate.
 
@@ -43,7 +43,7 @@ Questa versione espone il monitoraggio. Non registra servizi, pulsanti, interrut
 1. In HACS apri il menu **Repository personalizzati**.
 2. Inserisci `https://github.com/citroale90/ha-bluetti-local` e scegli la categoria **Integrazione**.
 3. Scarica **BLUETTI Local Wi-Fi**, scegliendo la versione in anteprima se HACS lo richiede, e riavvia Home Assistant.
-4. Aggiungi l’integrazione e scegli la modalità di rete **Automatica** oppure **Manuale**, come descritto sotto.
+4. Aggiungi l’integrazione e scegli la modalità di rete **DNS diretto**, **Automatica** oppure **Manuale**, come descritto sotto.
 
 Il repository è utilizzabile come repository personalizzato: non è dichiarato incluso nel catalogo predefinito HACS. La versione minima indicata nei metadati è Home Assistant **2026.10.4**, la versione effettivamente collaudata. Versioni precedenti non sono state verificate.
 
@@ -60,17 +60,31 @@ Home Assistant deve poter ascoltare sull’indirizzo configurato. Con Home Assis
 
 ## Configurazione automatica dentro il plugin
 
-La versione 0.2.0 gestisce direttamente le regole quando Home Assistant gira **sul router Linux dell’UPS**, nella stessa rete dell’host, e dispone già del permesso `NET_ADMIN`. La procedura guidata verifica i requisiti, chiede l’interfaccia LAN e mostra l’ambito prima della conferma. HACS non può concedere da solo questi permessi o configurare un router separato.
+La versione 0.3.0 gestisce direttamente le regole quando Home Assistant gira **sul router Linux dell’UPS**, nella stessa rete dell’host, e dispone già del permesso `NET_ADMIN`. La procedura guidata verifica i requisiti, chiede l’interfaccia LAN e mostra l’ambito prima della conferma. HACS non può concedere da solo questi permessi o configurare un router separato.
 
 **Non viene installato alcun servizio aggiuntivo:** niente helper sul router, script esterno, timer systemd, account SSH, broker MQTT separato o nuove dipendenze. Il codice del componente usa direttamente l’interfaccia nftables del kernel e una propria tabella dedicata, limitata all’IP e all’interfaccia dell’UPS.
 
 Il ricevitore parte prima delle regole. Servono due nuove letture valide entro tre minuti, altrimenti le nuove regole vengono rimosse. Se una vecchia connessione cloud impedisce il collegamento locale, viene fatta scadere soltanto la connessione TCP/18760 dell’UPS: nessuno svuotamento generale delle connessioni, nessun comando AC/DC. Un controllo nativo di Home Assistant verifica le regole ogni 30 secondi e le ripristina se un ricaricamento del firewall le ha eliminate.
 
-Passare a Manuale, disabilitare o rimuovere la voce automatica elimina soltanto la sua tabella, se non è stata modificata da altri. Durante lo spegnimento completo di Home Assistant le regole confermate restano al loro posto e vengono riconosciute al ritorno; quelle appena create e non verificate vengono rimosse anche se la configurazione viene annullata. Rimuovi prima la voce dell’integrazione, poi i suoi file. Le vecchie regole manuali restano indipendenti e non vengono cancellate automaticamente.
+Arrestare, ricaricare, disabilitare o rimuovere l'integrazione elimina le sue regole, incluse quelle già verificate. Anche l'annullamento del task di verifica ripulisce le regole: non viene installato un blocco nel firewall di avvio. In modalità Automatica il DNS mantiene l'indirizzo originale del produttore, così, senza i reindirizzamenti, il Bluetti può ritentare il percorso cloud. La terminazione forzata del processo senza eseguire le procedure di arresto può lasciare le regole nel kernel fino alla successiva pulizia o al riavvio dell'host. Le vecchie regole manuali esterne restano indipendenti.
 
-Su installazioni diverse la modalità Manuale resta disponibile. La gestione automatica non è dichiarata compatibile con qualunque router, Home Assistant OS o rete Docker.
+Su installazioni diverse sono disponibili DNS diretto e Manuale. La gestione automatica non è dichiarata compatibile con qualunque router, Home Assistant OS o rete Docker.
 
-Collaudo 0.2.1: **75 test isolati** e una prova reale del kernel in reti Linux separate, con DNS UDP/TCP, traffico MQTT, esclusione degli altri client, applicazione ripetuta, scadenza mirata delle connessioni e conservazione delle tabelle estranee. Collaudo reale del 3 novembre: modalità Automatica confermata da letture nuove, vecchie regole manuali rimosse e acquisizione riuscita anche dopo la ricarica della sola integrazione. Non sono state azionate le uscite AC/DC o interrotta l’alimentazione. La stabilità per giorni o settimane resta da verificare.
+Collaudo 0.3.0: **82 test isolati** e una prova reale del kernel in reti Linux separate, con DNS UDP/TCP, traffico MQTT, esclusione degli altri client, applicazione ripetuta, scadenza mirata delle connessioni e conservazione delle tabelle estranee. Collaudo reale del 3 novembre: modalità Automatica confermata da letture nuove, vecchie regole manuali rimosse e acquisizione riuscita anche dopo la ricarica della sola integrazione. Non sono state azionate le uscite AC/DC o interrotta l’alimentazione. La stabilità per giorni o settimane resta da verificare.
+
+## DNS diretto con un router domestico
+
+Questa modalità collega il Bluetti direttamente al ricevitore MQTT di Home Assistant, anche quando Home Assistant gira su un Raspberry o NAS separato dal router. Il firmware deve usare il DNS locale configurato: il componente non può modificare a distanza le impostazioni DHCP di un router arbitrario.
+
+1. Riserva un IP all'UPS e all'host Home Assistant; il ricevitore deve essere raggiungibile dalla LAN sulla porta TCP **18760**.
+2. Scegli **DNS diretto** nella procedura guidata.
+3. Se hai già un resolver locale, scegli **DNS esterno** e crea quattro riscritture A verso l'IP di Home Assistant: `iot.bluettipower.com`, `gw.bluettipower.com`, `gwpry.bluettipower.com`, `iotde.bluettipower.com`. Il componente non apre il proprio socket DNS in questa variante. Verifica che non restino risposte AAAA dirette al cloud per questi nomi. Le riscritture globali possono interessare altri dispositivi Bluetti: usa l'ambito del singolo client, se il resolver lo consente.
+4. In alternativa scegli **DNS integrato**: ascolta sull'IP di Home Assistant, UDP/TCP **53**, e risponde soltanto all'IP dell'UPS con l'indirizzo del ricevitore. La porta deve essere disponibile e accessibile dalla LAN, con i permessi di bind necessari. Assegna questo DNS tramite una voce DHCP dedicata al solo UPS. **Non impostarlo come DNS generale della casa**: non risolve altri domini o client e non accetta un proxy DNS del router come sorgente.
+5. Conferma DNS/DHCP e verifica campioni completi nuovi. Nessuna regola NAT viene creata. Il ricevitore MQTT resta dentro l'integrazione: non occorre un broker separato.
+
+Le modifiche DNS del router/resolver restano a carico dell'amministratore e non vengono cancellate dal plugin. Il ritorno al cloud a integrazione spenta dipende da quelle impostazioni e dalla cache del dispositivo: questa modalità non garantisce un fallback automatico. Sulle installazioni Home Assistant OS o Container occorre verificare anche l'accessibilità della porta DNS; HACS da solo non pubblica porte o concede permessi.
+
+Il collegamento diretto con host separato, DNS UDP/TCP, MQTT e riconnessione è verificato in reti Linux isolate, senza NAT né Internet reale. Il dispositivo fisico è stato verificato con la modalità Automatica; la prova DNS diretto sul Bluetti reale resta distinta e non è ancora dichiarata superata.
 
 ## Percorso di rete necessario
 
