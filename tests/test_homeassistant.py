@@ -6,6 +6,8 @@ import shutil
 import socket
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 from homeassistant.core import HomeAssistant, HassJob
 from homeassistant.config_entries import ConfigEntries
@@ -135,3 +137,53 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
         await self.hass.async_block_till_done()
         self.assertEqual(self.hass.states.get('sensor.test_ups_batteria').state,'unavailable')
         self.assertEqual(self.hass.states.get('binary_sensor.test_ups_telemetria_locale').state,'off')
+
+    async def test_keepalives_without_fresh_samples_close_only_data_socket(self):
+        await self.setup_entry()
+        with patch('custom_components.bluetti_local.server.SAMPLE_TIMEOUT_SECONDS',.2):
+            reader,writer=await self.connect();await self.send_sample(writer)
+            for _ in range(3):
+                writer.write(bytes.fromhex('c000'));await writer.drain()
+                self.assertEqual(await asyncio.wait_for(reader.readexactly(2),1),bytes.fromhex('d000'))
+                await asyncio.sleep(.02)
+            self.assertEqual(await asyncio.wait_for(reader.read(1),1),b'')
+        self.assertEqual(self.entry.runtime_data.receiver.telemetry_reconnects,1)
+        self.assertFalse(self.entry.runtime_data.device.online)
+        _,new=await self.connect();await self.send_sample(new,2)
+        self.assertTrue(self.entry.runtime_data.device.online)
+
+    async def test_new_complete_reports_renew_data_session_deadline(self):
+        await self.setup_entry()
+        with patch('custom_components.bluetti_local.server.SAMPLE_TIMEOUT_SECONDS',.3):
+            reader,writer=await self.connect()
+            for cycle in range(1,4):
+                await self.send_sample(writer,cycle)
+                await asyncio.sleep(.08)
+            writer.write(bytes.fromhex('c000'));await writer.drain()
+            self.assertEqual(await asyncio.wait_for(reader.readexactly(2),1),bytes.fromhex('d000'))
+        self.assertEqual(self.entry.runtime_data.receiver.telemetry_reconnects,0)
+        self.assertTrue(self.entry.runtime_data.device.online)
+
+    async def test_automatic_network_requires_explicit_confirmation(self):
+        manager=SimpleNamespace(start=AsyncMock(),stop=AsyncMock())
+        with patch('custom_components.bluetti_local.config_flow.capabilities',return_value={'supported':True,'reason':None}), \
+             patch('custom_components.bluetti_local.config_flow.socket.if_nameindex',return_value=[(1,'lo'),(2,'eth0')]), \
+             patch('custom_components.bluetti_local.config_flow.RouterRules') as rules, \
+             patch('custom_components.bluetti_local.RouterManager',return_value=manager):
+            flow=await self.hass.config_entries.flow.async_init(DOMAIN,context={'source':'user'},data={**self.config,'network_mode':'automatic'})
+            self.assertEqual(flow['type'],'form');self.assertEqual(flow['step_id'],'network')
+            manager.start.assert_not_awaited()
+            rejected=await self.hass.config_entries.flow.async_configure(flow['flow_id'],{'interface':'eth0','confirm':False})
+            self.assertEqual(rejected['errors']['base'],'network_confirmation_required')
+            manager.start.assert_not_awaited()
+            accepted=await self.hass.config_entries.flow.async_configure(flow['flow_id'],{'interface':'eth0','confirm':True})
+            self.assertEqual(accepted['type'],'create_entry')
+            await self.hass.async_block_till_done();manager.start.assert_awaited_once()
+
+    async def test_automatic_network_reports_missing_permissions_without_applying_rules(self):
+        with patch('custom_components.bluetti_local.config_flow.capabilities',return_value={'supported':False,'reason':'net_admin_required'}), \
+             patch('custom_components.bluetti_local.config_flow.RouterRules') as rules:
+            flow=await self.hass.config_entries.flow.async_init(DOMAIN,context={'source':'user'},data={**self.config,'network_mode':'automatic'})
+            self.assertEqual(flow['type'],'form')
+            self.assertEqual(flow['errors']['base'],'net_admin_required')
+            rules.assert_not_called()

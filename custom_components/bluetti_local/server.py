@@ -12,9 +12,10 @@ from homeassistant.core import callback
 from .models import BluettiDevice
 from .protocol import Protocol, MAX_PACKET
 from .local_dns import LocalDNS
-from .const import DEFAULT_DNS_PORT
+from .const import DEFAULT_DNS_PORT, STALE_SECONDS
 
 _LOGGER = logging.getLogger(__name__)
+SAMPLE_TIMEOUT_SECONDS = STALE_SECONDS
 
 
 class LocalReceiver:
@@ -31,6 +32,7 @@ class LocalReceiver:
         self._stopping = False
         self.rejected_connections = 0
         self.protocol_errors = 0
+        self.telemetry_reconnects = 0
         self.dns = LocalDNS(listen_host, dns_port, device_ip)
 
     async def start(self):
@@ -95,18 +97,28 @@ class LocalReceiver:
         self._writer = writer
         protocol = Protocol(self.device.accept_sample, expected_serial=self.device.sn)
         handshake_deadline = asyncio.get_running_loop().time() + 15
+        sample_deadline = asyncio.get_running_loop().time() + SAMPLE_TIMEOUT_SECONDS
         try:
             while not self._stopping:
-                timeout = 90
+                # MQTT keepalives or incomplete/duplicate reports must not keep
+                # a stalled telemetry socket open indefinitely. Close only the
+                # data session so the UPS can perform its normal reconnect.
+                timeout = sample_deadline - asyncio.get_running_loop().time()
+                if timeout <= 0:
+                    self.telemetry_reconnects += 1
+                    break
                 if not protocol.model_seen:
-                    timeout = handshake_deadline - asyncio.get_running_loop().time()
+                    timeout = min(timeout, handshake_deadline - asyncio.get_running_loop().time())
                     if timeout <= 0:
                         raise TimeoutError
+                samples_before = self.device.valid_samples
                 data = await asyncio.wait_for(reader.read(4096), timeout)
                 if not data:
                     break
                 for response in protocol.feed(data):
                     writer.write(response)
+                if self.device.valid_samples > samples_before:
+                    sample_deadline = asyncio.get_running_loop().time() + SAMPLE_TIMEOUT_SECONDS
                 await asyncio.wait_for(writer.drain(), 5)
         except asyncio.CancelledError:
             raise
@@ -114,6 +126,8 @@ class LocalReceiver:
             # MQTT CONNECT contains credentials. Never log payloads, exceptions
             # containing packet contents, identities or topics, even at DEBUG.
             self.protocol_errors += 1
+            if asyncio.get_running_loop().time() >= sample_deadline:
+                self.telemetry_reconnects += 1
             _LOGGER.debug("Local UPS data connection ended; waiting for reconnection")
         finally:
             if self._writer is writer:
@@ -132,6 +146,7 @@ class LocalReceiver:
             "fresh_sample_available": self.device.online,
             "valid_samples": self.device.valid_samples,
             "protocol_errors": self.protocol_errors,
+            "telemetry_reconnects": self.telemetry_reconnects,
             "rejected_connections": self.rejected_connections,
             "read_only": True,
             "local_dns_answers": self.dns.answers,

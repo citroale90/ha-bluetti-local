@@ -4,20 +4,35 @@
     "step": {
       "user": {
         "title": "Connect BLUETTI on your local network",
-        "description": "Verified read-only support for Elite 30 V2 (EL30V2). The UPS must reach this receiver and the router must direct only the BLUETTI data connection here. Reserve the UPS IP address in DHCP. Sensors become unavailable after 90 seconds without a valid sample. No cloud account or Bluetooth is required.",
+        "description": "Read-only local telemetry for Elite 30 V2. Choose Automatic when Home Assistant runs on the UPS’s Linux router with network administration permission: the integration manages three UPS-only rules itself. Choose Manual to keep existing router configuration. Reserve the UPS IP in DHCP. No cloud account or Bluetooth.",
         "data": {
           "name": "Device name",
           "device_ip": "UPS IPv4 address",
           "serial": "UPS serial number without EL30V2",
           "listen_host": "Home Assistant local IPv4 address",
           "listen_port": "Receiver port",
-          "dns_port": "UPS local DNS port"
+          "dns_port": "UPS local DNS port",
+          "network_mode": "Network setup"
+        }
+      },
+      "network": {
+        "title": "Configure this UPS’s network",
+        "description": "The integration will manage three rules for {device_ip} to {receiver_ip} in its own table. Confirm only if Home Assistant runs on the router used by the UPS. It may reconnect only the data channel and rolls back new rules if two valid reports do not arrive within three minutes. UPS power, AC/DC outputs, other clients’ DNS and existing firewall rules stay untouched. No additional service is required.",
+        "data": {
+          "interface": "Incoming UPS LAN interface",
+          "confirm": "I confirm the topology and authorise the three UPS-only rules"
         }
       }
     },
     "error": {
       "invalid_config": "Check local IP addresses, serial number, name and port.",
-      "port_already_configured": "This local receiver port is already configured."
+      "port_already_configured": "This local receiver port is already configured.",
+      "linux_required": "Automatic mode requires Linux.",
+      "net_admin_required": "NET_ADMIN permission is missing; HACS cannot grant it. Use Manual or configure host permissions first.",
+      "nftables_unavailable": "The kernel nftables interface is unavailable in this environment.",
+      "kernel_too_old": "Automatic routing requires Linux 4.18 or later.",
+      "network_confirmation_required": "Explicit confirmation of the topology and rules is required.",
+      "invalid_router_network": "Check the incoming interface and local receiver address."
     },
     "abort": {
       "already_configured": "This UPS is already configured."
@@ -27,19 +42,42 @@
     "step": {
       "init": {
         "title": "BLUETTI local connection",
-        "description": "Changes reconnect only the local receiver. Update the router rule if you change its address or port.",
+        "description": "Automatic mode manages this UPS’s routing inside the integration, with telemetry verification and rollback. Switching to Manual removes only rules created by the integration; existing external rules remain managed by your router.",
         "data": {
           "name": "Device name",
           "device_ip": "UPS IPv4 address",
           "listen_host": "Home Assistant local IPv4 address",
           "listen_port": "Receiver port",
-          "dns_port": "UPS local DNS port"
+          "dns_port": "UPS local DNS port",
+          "network_mode": "Network setup"
+        }
+      },
+      "network": {
+        "title": "Configure this UPS’s network",
+        "description": "The integration will manage three rules for {device_ip} to {receiver_ip} in its own table. Confirm only if Home Assistant runs on the router used by the UPS. It may reconnect only the data channel and rolls back new rules if two valid reports do not arrive within three minutes. UPS power, AC/DC outputs, other clients’ DNS and existing firewall rules stay untouched. No additional service is required.",
+        "data": {
+          "interface": "Incoming UPS LAN interface",
+          "confirm": "I confirm the topology and authorise the three UPS-only rules"
         }
       }
     },
     "error": {
       "invalid_config": "Check local IP addresses and port.",
-      "port_already_configured": "This receiver port is already configured."
+      "port_already_configured": "This receiver port is already configured.",
+      "linux_required": "Automatic mode requires Linux.",
+      "net_admin_required": "NET_ADMIN permission is missing; HACS cannot grant it. Use Manual or configure host permissions first.",
+      "nftables_unavailable": "The kernel nftables interface is unavailable in this environment.",
+      "kernel_too_old": "Automatic routing requires Linux 4.18 or later.",
+      "network_confirmation_required": "Explicit confirmation of the topology and rules is required.",
+      "invalid_router_network": "Check the incoming interface and local receiver address."
+    }
+  },
+  "selector": {
+    "network_mode": {
+      "options": {
+        "manual": "Manual — router already configured",
+        "automatic": "Automatic — Home Assistant on Linux router"
+      }
     }
   }
 }

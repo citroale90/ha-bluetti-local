@@ -6,9 +6,40 @@
 
 The working topology runs **Home Assistant Container with host networking on the same Linux router that receives the UPS's Wi-Fi traffic**. The receiver binds to that router's LAN IPv4 address. Its source-IP restriction expects the UPS's reserved address to remain visible.
 
-The integration receives unsolicited reports; it does not discover or configure router rules. Assign a DHCP reservation to the UPS before creating rules. Check that TCP 18760 and UDP/TCP 25354 are free on the chosen local address.
+The integration receives unsolicited reports. Automatic mode manages its own scoped rules on a supported Linux router; Manual mode leaves router configuration to the administrator. Assign a DHCP reservation to the UPS before creating rules. Check that TCP 18760 and UDP/TCP 25354 are free on the chosen local address.
 
 An installation on a separate Home Assistant host can have a different return path: a reply sent directly from that host to the UPS may bypass the router's reverse NAT. It may need additional routing/SNAT and must preserve the source address expected by the receiver. The example below is not a complete recipe for that topology. Home Assistant OS router integration is also not covered by this tested example.
+
+## Automatic mode: one integration
+
+In the integration setup or options, choose **Automatic**, select the incoming UPS LAN interface and confirm the displayed scope. Requirements:
+
+- Linux kernel 4.18 or later with nftables/conntrack available.
+- Home Assistant runs on the actual UPS router, sharing the host network namespace.
+- The existing Home Assistant process has `NET_ADMIN`; the integration does not grant it.
+- The receiver IPv4 address belongs to that namespace and is reachable from the UPS.
+
+There is no external helper or runtime script. `netfilter.py` uses nfnetlink directly, without invoking a shell or requiring `iptables`, `nft`, `pyroute2` or other packages. Each entry owns a `blt_…` IPv4 table with three source/interface-restricted DNAT rules. Its prerouting NAT priority is -110, before the usual -100 destination-NAT priority. It never rewrites existing firewall tables or the host’s INPUT/FORWARD policies.
+
+The component starts listeners, applies an atomic ruleset and waits for two **new** complete reports. New rules are removed after 180 seconds without confirmation, on setup failure or on cancellation. An existing, unchanged table is recognised rather than duplicated. A 30-second Home Assistant task checks only this table after verification. Unexpected modifications or ownership collisions produce an error rather than overwrite someone else’s rules.
+
+After 20 seconds without new reports, a newly configured automatic entry may expire at most four connection-tracking entries matching exactly the UPS source IPv4 and TCP destination port 18760. This allows a cached cloud connection to be re-evaluated through the local route. No global connection flush, forced Wi-Fi disconnect, power command or new background service is used.
+
+Switch to **Manual**, disable or remove the entry to remove its owned rules. Verified rules survive a complete HA shutdown so a restart does not deliberately switch the UPS back to cloud; unverified changes are still rolled back. The entry recreates missing rules on startup. Remove the entry before uninstalling its files.
+
+If migrating an existing manual configuration, keep its backup and remove the exact old UPS-only rules **after** automatic mode has been verified. The component deliberately does not delete external rules; otherwise switching it off would leave those external redirects active. Do not flush shared tables or stop the networking container.
+
+Unsupported topology or missing privileges requires Manual mode. Installing this through HACS alone cannot change another router or enable permissions on the host.
+
+## Test automatic routing without a real UPS
+
+On a Linux machine with `ip`, root privileges and network namespaces:
+
+```bash
+sudo unshare --net python3 tools/test-linux-router.py
+```
+
+The tool refuses the initial host namespace. It uses two private namespaces and a synthetic UPS, checks DNS/MQTT DNAT and unrelated-client/rule isolation, and never accesses a production LAN or the Internet.
 
 ## Linux router example
 

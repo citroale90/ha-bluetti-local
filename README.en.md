@@ -4,7 +4,7 @@
 
 Read-only, local Wi-Fi telemetry for the **BLUETTI Elite 30 V2 (EL30V2)**. No cloud account or Bluetooth connection is required by this integration. It is derived in part from the official BLUETTI integration, with a separate `bluetti_local` domain and an independently implemented local transport.
 
-**Preview release 0.1.1.** Tested with EL30V2 IoT firmware **8024.14** and Home Assistant **2026.10.4**. Other models, firmware versions and regions have not been validated. Long-term reliability over days or weeks has not yet been established. This is an independent project, not an official BLUETTI product.
+**Preview release 0.2.0.** Tested with EL30V2 IoT firmware **8024.14** and Home Assistant **2026.10.4**. Other models, firmware versions and regions have not been validated. Long-term reliability over days or weeks has not yet been established. This is an independent project, not an official BLUETTI product.
 
 ## What it provides
 
@@ -35,9 +35,19 @@ Then open **Settings → Devices & services → Add integration → BLUETTI Loca
 | Local data receiver | TCP 18760 |
 | UPS-only DNS receiver | UDP/TCP 25354 |
 
-**Network configuration is required.** The UPS normally opens outbound connections to BLUETTI. Your router must redirect only this UPS's data and DNS traffic to the local receivers. Installing the component does not change your router. See the [network guide](docs/network.md).
+## Network setup inside the integration
+
+Choose **Automatic** if Home Assistant runs on the Linux router used by the UPS, shares its network namespace, and already has `NET_ADMIN`. Select the incoming LAN interface and confirm the displayed UPS-only scope. The component then manages its own three routing rules directly through the Linux kernel. **No router helper, external script, systemd service, MQTT broker, SSH account or additional package is installed.**
+
+The receiver starts before the rules. Two new CRC-checked reports must arrive within three minutes; otherwise newly created rules are removed. If an existing cloud socket prevents reconnection, the component may expire only the UPS’s TCP/18760 connection-tracking entries. It never flushes connection tracking globally. Confirmed rules are rechecked every 30 seconds and restored after an external firewall reload, using Home Assistant’s scheduler.
+
+The setup flow checks privileges and the local listening address before applying anything. HACS cannot grant kernel privileges or configure a separate router. Automatic mode is therefore **not universal plug-and-play**: on unsupported installations choose **Manual**, which preserves the previous behavior and uses rules configured on your router. See the [network guide](docs/network.md).
+
+Switching an automatic entry to Manual, disabling it or removing it deletes only its own unchanged table. Rules are kept during a full Home Assistant shutdown and recognised again on startup; new, unverified rules are rolled back even on cancellation. Uninstall the integration entry before deleting its files. Previously installed manual rules are not silently adopted or deleted.
 
 The validated topology runs Home Assistant Container with host networking on a Linux router. A separate Home Assistant host or Docker bridge network may require additional routing or SNAT; these topologies have not been validated. Do not apply the example unchanged to them.
+
+A data socket is also closed after 90 seconds without a new complete report, even if MQTT keepalives continue. Only the data session reconnects; no UPS output or power action is performed.
 
 ## Reconnection and offline operation
 
@@ -51,7 +61,7 @@ While local routing is enabled, the BLUETTI cloud app may show the device offlin
 
 ## Validated behavior and limits
 
-The initial validation includes **53 isolated integration tests** and real, coherent readings after both a Home Assistant restart and an integration reload. The tests cover framing, CRC, incomplete/replayed/stale reports, socket reconnection, local DNS and Home Assistant entity lifecycle. No UPS output change or power-loss test was performed.
+The original transport passed 53 isolated integration tests and real telemetry checks. Version 0.2.0 passes **73 isolated integration tests**, plus a real Linux namespace test of UDP/TCP DNS, MQTT routing, client isolation, idempotence, scoped connection expiry and rule removal. Live validation on 3 November confirmed automatic mode, fresh real UPS readings after removal of the old manual rules, and successful integration reload. The tests cover framing, CRC, incomplete/replayed/stale reports, socket reconnection, local DNS and Home Assistant entity lifecycle. No UPS output change or power-loss test was performed.
 
 Existing automations must use the new entity identifiers or be migrated explicitly. Missing/stale readings are unavailable, not zero battery or proof of a blackout. This repository does not include a host shutdown watchdog or the separate Bluetooth library fixes.
 

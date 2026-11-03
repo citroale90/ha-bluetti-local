@@ -4,20 +4,35 @@
     "step": {
       "user": {
         "title": "Collega BLUETTI sulla rete locale",
-        "description": "Supporto verificato per Elite 30 V2 (EL30V2), in sola lettura. Il ricevitore deve essere raggiungibile dall’UPS e il router deve indirizzare qui il solo collegamento dati Bluetti. Usa una prenotazione DHCP per l’UPS. Le letture diventano non disponibili se mancano dati validi per 90 secondi. Account cloud e Bluetooth non sono necessari.",
+        "description": "Telemetria locale in sola lettura per Elite 30 V2. Scegli Automatico se Home Assistant gira sul router Linux dell’UPS con i permessi di rete necessari; il plugin gestisce direttamente tre regole limitate all’UPS. Scegli Manuale per mantenere le regole già configurate. Usa un IP riservato in DHCP. Nessun account cloud o Bluetooth.",
         "data": {
           "name": "Nome dispositivo",
           "device_ip": "Indirizzo IPv4 dell’UPS",
           "serial": "Numero di serie dell’UPS, senza EL30V2",
           "listen_host": "Indirizzo IPv4 locale di Home Assistant",
           "listen_port": "Porta del ricevitore",
-          "dns_port": "Porta DNS locale dell’UPS"
+          "dns_port": "Porta DNS locale dell’UPS",
+          "network_mode": "Configurazione della rete"
+        }
+      },
+      "network": {
+        "title": "Configura la rete del solo UPS",
+        "description": "Verranno gestite direttamente dal plugin tre regole per {device_ip} verso {receiver_ip}, in una tabella dedicata. Conferma soltanto se Home Assistant gira sul router usato dall’UPS. Il plugin può riconnettere il solo canale dati e ripristina le nuove regole se non riceve due letture valide entro tre minuti. Non modifica alimentazione, uscite AC/DC, DNS degli altri dispositivi o regole esistenti. Non serve un servizio aggiuntivo.",
+        "data": {
+          "interface": "Interfaccia LAN da cui arriva l’UPS",
+          "confirm": "Confermo la topologia e autorizzo le tre regole del solo UPS"
         }
       }
     },
     "error": {
       "invalid_config": "Controlla indirizzi locali, numero di serie, nome e porta.",
-      "port_already_configured": "Questa porta locale è già usata da un’altra voce dell’integrazione."
+      "port_already_configured": "Questa porta locale è già usata da un’altra voce dell’integrazione.",
+      "linux_required": "La modalità automatica richiede Linux.",
+      "net_admin_required": "Manca il permesso NET_ADMIN: HACS non può concederlo. Usa la modalità manuale o configura prima i permessi dell’host.",
+      "nftables_unavailable": "Il kernel non rende disponibile nftables in questo ambiente.",
+      "kernel_too_old": "La gestione automatica richiede Linux 4.18 o successivo.",
+      "network_confirmation_required": "Serve la conferma esplicita delle regole e della topologia.",
+      "invalid_router_network": "Controlla l’interfaccia LAN e l’indirizzo locale del ricevitore."
     },
     "abort": {
       "already_configured": "Questo UPS è già configurato."
@@ -27,19 +42,42 @@
     "step": {
       "init": {
         "title": "Collegamento locale BLUETTI",
-        "description": "Le modifiche riconnettono soltanto il ricevitore locale. Aggiorna anche l’eventuale regola del router se cambi indirizzo o porta.",
+        "description": "La modalità Automatica gestisce il percorso del solo UPS dentro questo plugin, con verifica delle letture e ripristino. Passare a Manuale rimuove soltanto le regole create dal plugin; eventuali regole esterne restano da gestire sul router.",
         "data": {
           "name": "Nome dispositivo",
           "device_ip": "Indirizzo IPv4 dell’UPS",
           "listen_host": "Indirizzo IPv4 locale di Home Assistant",
           "listen_port": "Porta del ricevitore",
-          "dns_port": "Porta DNS locale dell’UPS"
+          "dns_port": "Porta DNS locale dell’UPS",
+          "network_mode": "Configurazione della rete"
+        }
+      },
+      "network": {
+        "title": "Configura la rete del solo UPS",
+        "description": "Verranno gestite direttamente dal plugin tre regole per {device_ip} verso {receiver_ip}, in una tabella dedicata. Conferma soltanto se Home Assistant gira sul router usato dall’UPS. Il plugin può riconnettere il solo canale dati e ripristina le nuove regole se non riceve due letture valide entro tre minuti. Non modifica alimentazione, uscite AC/DC, DNS degli altri dispositivi o regole esistenti. Non serve un servizio aggiuntivo.",
+        "data": {
+          "interface": "Interfaccia LAN da cui arriva l’UPS",
+          "confirm": "Confermo la topologia e autorizzo le tre regole del solo UPS"
         }
       }
     },
     "error": {
       "invalid_config": "Controlla gli indirizzi locali e la porta.",
-      "port_already_configured": "Questa porta locale è già configurata."
+      "port_already_configured": "Questa porta locale è già configurata.",
+      "linux_required": "La modalità automatica richiede Linux.",
+      "net_admin_required": "Manca il permesso NET_ADMIN: HACS non può concederlo. Usa la modalità manuale o configura prima i permessi dell’host.",
+      "nftables_unavailable": "Il kernel non rende disponibile nftables in questo ambiente.",
+      "kernel_too_old": "La gestione automatica richiede Linux 4.18 o successivo.",
+      "network_confirmation_required": "Serve la conferma esplicita delle regole e della topologia.",
+      "invalid_router_network": "Controlla l’interfaccia LAN e l’indirizzo locale del ricevitore."
+    }
+  },
+  "selector": {
+    "network_mode": {
+      "options": {
+        "manual": "Manuale — regole già configurate",
+        "automatic": "Automatico — Home Assistant sul router Linux"
+      }
     }
   }
 }

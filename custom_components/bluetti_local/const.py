@@ -12,6 +12,10 @@ CONF_LISTEN_HOST = "listen_host"
 CONF_LISTEN_PORT = "listen_port"
 CONF_DNS_PORT = "dns_port"
 CONF_NAME = "name"
+CONF_NETWORK_MODE = "network_mode"
+CONF_INTERFACE = "interface"
+NETWORK_MANUAL = "manual"
+NETWORK_AUTOMATIC = "automatic"
 
 # Function codes are kept from the official entity model where applicable.
 SENSORS = (
