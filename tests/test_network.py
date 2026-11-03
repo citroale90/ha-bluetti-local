@@ -108,6 +108,12 @@ class RouterLifecycleTests(unittest.IsolatedAsyncioTestCase):
     async def test_cancel_pending_verification_rolls_back(self):
         await self.manager.start();await self.manager.stop()
         self.assertEqual(self.removed,1)
+    async def test_direct_task_cancellation_rolls_back_unverified_rules(self):
+        await self.manager.start();await self.real_sleep(.001)
+        self.manager.task.cancel()
+        with self.assertRaises(asyncio.CancelledError):await self.manager.task
+        self.assertEqual(self.removed,1)
+        self.assertFalse(self.manager._new_rules)
     async def test_existing_rules_are_not_removed_when_no_change_was_made(self):
         self.changed=False;await self.manager.start();await self.manager.task
         self.assertEqual(self.manager.phase,'unverified');self.assertEqual(self.removed,0)

@@ -85,6 +85,9 @@ class RouterManager:
                         self.error = "no_fresh_samples"
                         return
         except asyncio.CancelledError:
+            if self._new_rules:
+                await self.hass.async_add_executor_job(self.rules.remove)
+                self._new_rules = False
             raise
         except (NetworkError, OSError):
             self.phase = "error"

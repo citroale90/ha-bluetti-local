@@ -7,7 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import Platform, EVENT_HOMEASSISTANT_STOP
 from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN, CONF_NAME, CONF_SERIAL, CONF_DEVICE_IP, CONF_LISTEN_HOST, CONF_LISTEN_PORT, CONF_DNS_PORT, DEFAULT_DNS_PORT
@@ -41,6 +41,9 @@ async def async_setup_entry(hass, entry: ConfigEntry) -> bool:
             manager = RouterManager(hass, entry.unique_id, config, device)
             entry.runtime_data.router = manager
             await manager.start()
+            async def stop_router(event):
+                await manager.stop()
+            entry.async_on_unload(hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, stop_router))
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     except Exception:
         if entry.runtime_data.router:

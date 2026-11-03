@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 — 2026-11-03 (preview)
+
+- Explicit Home Assistant stop cleanup also covers setup cancelled before its background verification starts.
+- Direct cancellation rolls back newly created, unverified rules. Confirmed rules still survive a full Home Assistant restart.
+- 75 isolated tests, including actual Home Assistant stop-event handling.
+
+
 ## 0.2.0 — 2026-11-03 (preview)
 
 - Optional automatic network setup inside the integration for a supported Linux router.

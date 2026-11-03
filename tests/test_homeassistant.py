@@ -187,3 +187,17 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(flow['type'],'form')
             self.assertEqual(flow['errors']['base'],'net_admin_required')
             rules.assert_not_called()
+
+    async def test_homeassistant_stop_cleans_pending_router_setup(self):
+        from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+        manager=SimpleNamespace(start=AsyncMock(),stop=AsyncMock())
+        with patch('custom_components.bluetti_local.config_flow.capabilities',return_value={'supported':True,'reason':None}), \
+             patch('custom_components.bluetti_local.config_flow.socket.if_nameindex',return_value=[(1,'lo'),(2,'eth0')]), \
+             patch('custom_components.bluetti_local.config_flow.RouterRules'), \
+             patch('custom_components.bluetti_local.RouterManager',return_value=manager):
+            flow=await self.hass.config_entries.flow.async_init(DOMAIN,context={'source':'user'},data={**self.config,'network_mode':'automatic'})
+            await self.hass.config_entries.flow.async_configure(flow['flow_id'],{'interface':'eth0','confirm':True})
+            await self.hass.async_block_till_done()
+            self.hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
+            await self.hass.async_block_till_done()
+            manager.stop.assert_awaited_once()

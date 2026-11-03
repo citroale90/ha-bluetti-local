@@ -8,7 +8,7 @@ Il dominio `bluetti_local` è indipendente da `bluetti` e `bluetti_bt`. La disin
 
 ## Stato del lavoro
 
-Versione **0.2.0 in anteprima**. Il protocollo è stato verificato su EL30V2 con firmware IoT 8024.14: acquisizione passiva, confronto con la mappa registri e prova diretta del ricevitore. Il collaudo dell’integrazione completa in Home Assistant e la verifica di stabilità prolungata sono registrati separatamente dai test del solo protocollo.
+Versione **0.2.1 in anteprima**. Il protocollo è stato verificato su EL30V2 con firmware IoT 8024.14: acquisizione passiva, confronto con la mappa registri e prova diretta del ricevitore. Il collaudo dell’integrazione completa in Home Assistant e la verifica di stabilità prolungata sono registrati separatamente dai test del solo protocollo.
 
 Il supporto di altri modelli BLUETTI richiede prove e mappe registri dedicate.
 
@@ -70,7 +70,7 @@ Passare a Manuale, disabilitare o rimuovere la voce automatica elimina soltanto 
 
 Su installazioni diverse la modalità Manuale resta disponibile. La gestione automatica non è dichiarata compatibile con qualunque router, Home Assistant OS o rete Docker.
 
-Collaudo 0.2.0: **73 test isolati** e una prova reale del kernel in reti Linux separate, con DNS UDP/TCP, traffico MQTT, esclusione degli altri client, applicazione ripetuta, scadenza mirata delle connessioni e conservazione delle tabelle estranee. Collaudo reale del 3 novembre: modalità Automatica confermata da letture nuove, vecchie regole manuali rimosse e acquisizione riuscita anche dopo la ricarica della sola integrazione. Non sono state azionate le uscite AC/DC o interrotta l’alimentazione. La stabilità per giorni o settimane resta da verificare.
+Collaudo 0.2.1: **75 test isolati** e una prova reale del kernel in reti Linux separate, con DNS UDP/TCP, traffico MQTT, esclusione degli altri client, applicazione ripetuta, scadenza mirata delle connessioni e conservazione delle tabelle estranee. Collaudo reale del 3 novembre: modalità Automatica confermata da letture nuove, vecchie regole manuali rimosse e acquisizione riuscita anche dopo la ricarica della sola integrazione. Non sono state azionate le uscite AC/DC o interrotta l’alimentazione. La stabilità per giorni o settimane resta da verificare.
 
 ## Percorso di rete necessario
 

@@ -4,7 +4,7 @@
 
 Read-only, local Wi-Fi telemetry for the **BLUETTI Elite 30 V2 (EL30V2)**. No cloud account or Bluetooth connection is required by this integration. It is derived in part from the official BLUETTI integration, with a separate `bluetti_local` domain and an independently implemented local transport.
 
-**Preview release 0.2.0.** Tested with EL30V2 IoT firmware **8024.14** and Home Assistant **2026.10.4**. Other models, firmware versions and regions have not been validated. Long-term reliability over days or weeks has not yet been established. This is an independent project, not an official BLUETTI product.
+**Preview release 0.2.1.** Tested with EL30V2 IoT firmware **8024.14** and Home Assistant **2026.10.4**. Other models, firmware versions and regions have not been validated. Long-term reliability over days or weeks has not yet been established. This is an independent project, not an official BLUETTI product.
 
 ## What it provides
 
@@ -61,7 +61,7 @@ While local routing is enabled, the BLUETTI cloud app may show the device offlin
 
 ## Validated behavior and limits
 
-The original transport passed 53 isolated integration tests and real telemetry checks. Version 0.2.0 passes **73 isolated integration tests**, plus a real Linux namespace test of UDP/TCP DNS, MQTT routing, client isolation, idempotence, scoped connection expiry and rule removal. Live validation on 3 November confirmed automatic mode, fresh real UPS readings after removal of the old manual rules, and successful integration reload. The tests cover framing, CRC, incomplete/replayed/stale reports, socket reconnection, local DNS and Home Assistant entity lifecycle. No UPS output change or power-loss test was performed.
+The original transport passed 53 isolated integration tests and real telemetry checks. Version 0.2.1 passes **75 isolated integration tests**, plus a real Linux namespace test of UDP/TCP DNS, MQTT routing, client isolation, idempotence, scoped connection expiry and rule removal. Live validation on 3 November confirmed automatic mode, fresh real UPS readings after removal of the old manual rules, and successful integration reload. The tests cover framing, CRC, incomplete/replayed/stale reports, socket reconnection, local DNS and Home Assistant entity lifecycle. No UPS output change or power-loss test was performed.
 
 Existing automations must use the new entity identifiers or be migrated explicitly. Missing/stale readings are unavailable, not zero battery or proof of a blackout. This repository does not include a host shutdown watchdog or the separate Bluetooth library fixes.
 
