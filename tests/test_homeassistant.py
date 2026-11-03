@@ -42,6 +42,7 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
                               (device_registry,entity_registry,area_registry,category_registry,
                                floor_registry,issue_registry,label_registry,restore_state)))
         self.hass.config.time_zone='Europe/Rome'
+        self.hass.config.language = 'en'
         self.hass.config.skip_pip=True
         self.connections=[]
         self.assertTrue(await async_setup_component(self.hass,'homeassistant',{}))
@@ -86,17 +87,17 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len([s for s in states if s.entity_id.startswith('sensor.test_ups_')]),9)
         self.assertEqual(len([s for s in states if s.entity_id.startswith('binary_sensor.test_ups_')]),3)
         self.assertFalse([s for s in states if s.entity_id.startswith(('switch.','button.','select.'))])
-        self.assertEqual(self.hass.states.get('sensor.test_ups_batteria').state,'unavailable')
+        self.assertEqual(self.hass.states.get('sensor.test_ups_battery').state,'unavailable')
 
     async def test_actual_tcp_reports_reach_homeassistant_and_disconnect_invalidates(self):
         await self.setup_entry();reader,writer=await self.connect();await self.send_sample(writer)
-        state=self.hass.states.get('sensor.test_ups_batteria')
+        state=self.hass.states.get('sensor.test_ups_battery')
         self.assertEqual(state.state,'99')
         self.assertEqual(state.attributes['transport'],'wifi_local')
         self.assertTrue(state.attributes['validated_crc'])
-        self.assertEqual(self.hass.states.get('binary_sensor.test_ups_telemetria_locale').state,'on')
+        self.assertEqual(self.hass.states.get('binary_sensor.test_ups_local_telemetry').state,'on')
         writer.close();await writer.wait_closed();await asyncio.sleep(.05);await self.hass.async_block_till_done()
-        self.assertEqual(self.hass.states.get('sensor.test_ups_batteria').state,'unavailable')
+        self.assertEqual(self.hass.states.get('sensor.test_ups_battery').state,'unavailable')
 
     async def test_reconnect_after_socket_loss_accepts_fresh_reports(self):
         await self.setup_entry();_,writer=await self.connect();await self.send_sample(writer)
@@ -135,8 +136,8 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
         device._clock=lambda:device._sample_time+91
         self.hass.async_run_hass_job(HassJob(self.entry.runtime_data.receiver._check_freshness),None)
         await self.hass.async_block_till_done()
-        self.assertEqual(self.hass.states.get('sensor.test_ups_batteria').state,'unavailable')
-        self.assertEqual(self.hass.states.get('binary_sensor.test_ups_telemetria_locale').state,'off')
+        self.assertEqual(self.hass.states.get('sensor.test_ups_battery').state,'unavailable')
+        self.assertEqual(self.hass.states.get('binary_sensor.test_ups_local_telemetry').state,'off')
 
     async def test_keepalives_without_fresh_samples_close_only_data_socket(self):
         await self.setup_entry()
@@ -249,8 +250,8 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
         await self.setup_entry();_,writer=await self.connect()
         writer.write(publish(report(values={102:99,140:0,142:0,144:0,146:0}))+publish(report(start=1300,values={1314:2381})))
         await writer.drain();await asyncio.sleep(.05);await self.hass.async_block_till_done()
-        ac='binary_sensor.test_ups_uscita_ac_abilitata'
-        dc='binary_sensor.test_ups_uscita_dc_abilitata'
+        ac='binary_sensor.test_ups_ac_output_enabled'
+        dc='binary_sensor.test_ups_dc_output_enabled'
         self.assertEqual(self.hass.states.get(ac).state,'unavailable')
         writer.write(publish(report(start=2000,values={2011:1,2012:0})))
         await writer.drain();await asyncio.sleep(.05);await self.hass.async_block_till_done()
@@ -296,17 +297,32 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
         for row in rows:
             state=self.hass.states.get(row.entity_id)
             self.assertNotIn(state.state,('unknown','unavailable'),row.entity_id)
-        mode=self.hass.states.get('sensor.test_ups_modalita_di_ricarica')
+        catalog = await translation.async_get_translations(self.hass, 'en', 'entity', {DOMAIN})
+        for row in rows:
+            key = f"component.{DOMAIN}.entity.{row.domain}.{row.translation_key}.name"
+            self.assertEqual(row.original_name, catalog[key], row.entity_id)
+        mode=self.hass.states.get('sensor.test_ups_charging_mode')
         self.assertEqual(mode.state,'standard')
         self.assertEqual(mode.attributes['options'],['standard','silent','turbo'])
         await self.send_profile(writer,3)
         self.assertEqual(len(entity_registry.async_entries_for_config_entry(entity_registry.async_get(self.hass),self.entry.entry_id)),23)
 
     async def test_discovered_entities_restore_on_reload_without_old_values_or_duplicates(self):
+        self.hass.config.language = 'it'
         await self.setup_entry();_,writer=await self.connect()
         await self.send_profile(writer,1);await self.send_profile(writer,2)
         registry=entity_registry.async_get(self.hass)
         before={r.unique_id:r.entity_id for r in entity_registry.async_entries_for_config_entry(registry,self.entry.entry_id)}
+        remaining_id = before['123456789_TimeRemaining']
+        charging_id = before['123456789_ChargingMode']
+        self.assertEqual(registry.async_get(remaining_id).original_name, 'Tempo rimanente stimato')
+        self.assertEqual(registry.async_get(charging_id).original_name, 'Modalità di ricarica')
+        catalog = await translation.async_get_translations(self.hass, 'it', 'entity', {DOMAIN})
+        for row in entity_registry.async_entries_for_config_entry(registry, self.entry.entry_id):
+            key = f"component.{DOMAIN}.entity.{row.domain}.{row.translation_key}.name"
+            self.assertEqual(row.original_name, catalog[key], row.entity_id)
+        registry.async_update_entity(charging_id, name='My charging mode')
+        self.hass.config.language = 'en'
         old=self.entry.runtime_data.device.discovery
         self.assertTrue(await self.hass.config_entries.async_reload(self.entry.entry_id))
         await self.hass.async_block_till_done()
@@ -316,7 +332,9 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
         _,writer=await self.connect();await self.send_profile(writer,1)
         after={r.unique_id:r.entity_id for r in entity_registry.async_entries_for_config_entry(registry,self.entry.entry_id)}
         self.assertEqual(before,after)
-        self.assertEqual(self.hass.states.get(before['123456789_TimeRemaining']).state,'0.1002')
+        self.assertEqual(registry.async_get(remaining_id).original_name, 'Estimated time remaining')
+        self.assertEqual(registry.async_get(charging_id).name, 'My charging mode')
+        self.assertEqual(self.hass.states.get(remaining_id).state, '0.1002')
 
     async def test_late_new_field_and_user_disabled_entity(self):
         await self.setup_entry();_,writer=await self.connect()
@@ -344,5 +362,5 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
         # Feed core only at the later clock, keeping the actual UPS online.
         writer.write(publish(report(cycle=3,start=102,values={102:99}))+publish(report(cycle=3,start=140,values={140:26,142:68,144:0,146:276}))+publish(report(cycle=3,start=1300,values={1314:2383})))
         await writer.drain();await asyncio.sleep(.05);await self.hass.async_block_till_done()
-        self.assertEqual(self.hass.states.get('sensor.test_ups_tempo_rimanente_stimato').state,'unavailable')
-        self.assertEqual(self.hass.states.get('sensor.test_ups_batteria').state,'99')
+        self.assertEqual(self.hass.states.get('sensor.test_ups_estimated_time_remaining').state,'unavailable')
+        self.assertEqual(self.hass.states.get('sensor.test_ups_battery').state,'99')

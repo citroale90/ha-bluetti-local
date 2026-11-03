@@ -107,12 +107,81 @@
   },
   "entity": {
     "sensor": {
+      "battery_pct": {
+        "name": "Batteria"
+      },
+      "ac_output_w": {
+        "name": "Uscita AC"
+      },
+      "dc_output_w": {
+        "name": "Uscita DC"
+      },
+      "dc_input_w": {
+        "name": "Ingresso DC"
+      },
+      "grid_input_w": {
+        "name": "Ingresso rete"
+      },
+      "grid_voltage_v": {
+        "name": "Tensione rete"
+      },
+      "total_output_w": {
+        "name": "Uscita totale"
+      },
+      "total_input_w": {
+        "name": "Ingresso totale"
+      },
+      "last_valid_sample": {
+        "name": "Ultima lettura valida"
+      },
+      "remaining_hours": {
+        "name": "Tempo rimanente stimato"
+      },
+      "reported_model": {
+        "name": "Modello rilevato"
+      },
+      "reported_serial": {
+        "name": "Numero di serie rilevato"
+      },
+      "eco_dc_hours": {
+        "name": "ECO DC tempo di spegnimento"
+      },
+      "eco_dc_threshold_w": {
+        "name": "ECO DC soglia di potenza"
+      },
+      "eco_ac_hours": {
+        "name": "ECO AC tempo di spegnimento"
+      },
+      "eco_ac_threshold_w": {
+        "name": "ECO AC soglia di potenza"
+      },
       "charging_mode": {
+        "name": "Modalità di ricarica",
         "state": {
           "standard": "Standard",
           "silent": "Silenziosa",
           "turbo": "Turbo"
         }
+      }
+    },
+    "binary_sensor": {
+      "local_connected": {
+        "name": "Telemetria locale"
+      },
+      "ac_output_enabled": {
+        "name": "Uscita AC abilitata"
+      },
+      "dc_output_enabled": {
+        "name": "Uscita DC abilitata"
+      },
+      "eco_dc_enabled": {
+        "name": "ECO DC attivo"
+      },
+      "eco_ac_enabled": {
+        "name": "ECO AC attivo"
+      },
+      "power_lifting_enabled": {
+        "name": "Power Lifting attivo"
       }
     }
   }

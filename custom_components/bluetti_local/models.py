@@ -17,9 +17,9 @@ from .discovery import Discovery
 class BluettiState:
     """A single official-style device function/state."""
 
-    def __init__(self, fn_code, fn_name, fn_value=None, fn_type="SENSOR", sensor_info=None):
+    def __init__(self, fn_code, translation_key, fn_value=None, fn_type="SENSOR", sensor_info=None):
         self.fn_code = fn_code
-        self.fn_name = fn_name
+        self.translation_key = translation_key
         self.fn_value = fn_value
         self.fn_type = fn_type
         self.sensor_info = sensor_info or {}
@@ -37,8 +37,8 @@ class BluettiDevice:
         self.name = name
         self.model = MODEL
         self.manufacturer = "Bluetti"
-        self.states = [BluettiState(code, title, sensor_info={"sensorType": kind})
-                       for code, _, title, kind in SENSORS]
+        self.states = [BluettiState(code, field, sensor_info={"sensorType": kind})
+                       for code, field, kind in SENSORS]
         self._callbacks: set[Callable[[], None]] = set()
         self._clock = monotonic
         self._sample_time = None
@@ -85,7 +85,7 @@ class BluettiDevice:
         values = {**values,
                   "total_output_w": values["ac_output_w"] + values["dc_output_w"],
                   "total_input_w": values["grid_input_w"] + values["dc_input_w"]}
-        for code, field, _, _ in SENSORS:
+        for code, field, _ in SENSORS:
             self.get_state(code).set_value(values[field])
         self.report_cycle = sample["report_cycle"]
         self._sample_time = self._clock()

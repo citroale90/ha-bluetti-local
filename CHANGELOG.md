@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.1 — 2026-11-03 (preview)
+
+- Localize all 23 entity names in English and Italian using Home Assistant's translation catalogs.
+- Preserve existing entity IDs, user names, and charging mode state values.
+
+## 0.4.0 — 2026-11-03 (preview)
+
+- Discover all 19 known readable EL30V2 fields from fresh reports, for up to 23 entities including totals and diagnostics.
+- Discover new fields after setup and restore known entities through the Home Assistant registry.
+- Track freshness per field and count service messages separately from malformed reports.
+
 ## 0.3.1 — 2026-11-03 (preview)
 
 - Restore read-only AC/DC enabled indicators from explicit registers 2011/2012. Zero watts does not imply an output is disabled.

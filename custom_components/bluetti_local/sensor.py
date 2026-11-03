@@ -38,7 +38,7 @@ class BluettiSensor(SensorEntity):
         self._device = device
         self._state_obj = state
         self._attr_unique_id = f"{device.device_id}_{state.fn_code}"
-        self._attr_name = state.fn_name
+        self._attr_translation_key = state.translation_key
         self._attr_device_class = meta["device_class"]
         self._attr_state_class = meta["state_class"]
         self._attr_native_unit_of_measurement = meta["unit"]
@@ -72,7 +72,7 @@ class LastSampleSensor(BluettiSensor):
 
     def __init__(self, device):
         from .models import BluettiState
-        super().__init__(device, BluettiState("last_valid_sample", "Ultima lettura valida"),
+        super().__init__(device, BluettiState("last_valid_sample", "last_valid_sample"),
                          {"device_class": SensorDeviceClass.TIMESTAMP, "state_class": None, "unit": None})
         self._attr_icon = "mdi:clock-check-outline"
 
@@ -95,7 +95,6 @@ class DiscoveredSensor(DiscoveredEntity, SensorEntity):
             self._attr_state_class = SensorStateClass.MEASUREMENT
         if field.kind == "charging":
             self._attr_options = list(CHARGING_OPTIONS)
-            self._attr_translation_key = "charging_mode"
 
     @property
     def native_value(self):

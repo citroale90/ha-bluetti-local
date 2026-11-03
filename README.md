@@ -8,11 +8,13 @@ Il dominio `bluetti_local` è indipendente da `bluetti` e `bluetti_bt`. La disin
 
 ## Stato del lavoro
 
-Versione **0.4.0 in anteprima**. Il protocollo è stato verificato su EL30V2 con firmware IoT 8024.14: acquisizione passiva, confronto con la mappa registri e prova diretta del ricevitore. Il collaudo dell’integrazione completa in Home Assistant e la verifica di stabilità prolungata sono registrati separatamente dai test del solo protocollo.
+Versione **0.4.1 in anteprima**. Il protocollo è stato verificato su EL30V2 con firmware IoT 8024.14: acquisizione passiva, confronto con la mappa registri e prova diretta del ricevitore. Il collaudo dell’integrazione completa in Home Assistant e la verifica di stabilità prolungata sono registrati separatamente dai test del solo protocollo.
 
 Il supporto di altri modelli BLUETTI richiede prove e mappe registri dedicate.
 
 Collaudo del 2 novembre 2026: 53 test superati in Home Assistant 2026.10.4 isolato, più letture reali riuscite dopo un riavvio di Home Assistant e dopo la ricarica dell’integrazione. Sono stati controllati checksum, coerenza dei campioni e DNS locale. Il collaudo non include un’interruzione dell’alimentazione dell’UPS né dimostra ancora la stabilità per giorni o settimane.
+
+Dalla 0.4.1 la configurazione, le opzioni, i nomi delle 23 entità e gli stati della modalità di ricarica sono disponibili in italiano e in inglese. Home Assistant usa le proprie impostazioni di lingua. Gli aggiornamenti conservano gli ID e i nomi personalizzati delle entità.
 
 ## Icona locale
 

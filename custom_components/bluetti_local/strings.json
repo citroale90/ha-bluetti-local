@@ -107,12 +107,81 @@
   },
   "entity": {
     "sensor": {
+      "battery_pct": {
+        "name": "Battery"
+      },
+      "ac_output_w": {
+        "name": "AC output"
+      },
+      "dc_output_w": {
+        "name": "DC output"
+      },
+      "dc_input_w": {
+        "name": "DC input"
+      },
+      "grid_input_w": {
+        "name": "Grid input"
+      },
+      "grid_voltage_v": {
+        "name": "Grid voltage"
+      },
+      "total_output_w": {
+        "name": "Total output"
+      },
+      "total_input_w": {
+        "name": "Total input"
+      },
+      "last_valid_sample": {
+        "name": "Last valid reading"
+      },
+      "remaining_hours": {
+        "name": "Estimated time remaining"
+      },
+      "reported_model": {
+        "name": "Reported model"
+      },
+      "reported_serial": {
+        "name": "Reported serial number"
+      },
+      "eco_dc_hours": {
+        "name": "DC ECO shutdown delay"
+      },
+      "eco_dc_threshold_w": {
+        "name": "DC ECO power threshold"
+      },
+      "eco_ac_hours": {
+        "name": "AC ECO shutdown delay"
+      },
+      "eco_ac_threshold_w": {
+        "name": "AC ECO power threshold"
+      },
       "charging_mode": {
+        "name": "Charging mode",
         "state": {
           "standard": "Standard",
           "silent": "Silent",
           "turbo": "Turbo"
         }
+      }
+    },
+    "binary_sensor": {
+      "local_connected": {
+        "name": "Local telemetry"
+      },
+      "ac_output_enabled": {
+        "name": "AC output enabled"
+      },
+      "dc_output_enabled": {
+        "name": "DC output enabled"
+      },
+      "eco_dc_enabled": {
+        "name": "DC ECO active"
+      },
+      "eco_ac_enabled": {
+        "name": "AC ECO active"
+      },
+      "power_lifting_enabled": {
+        "name": "Power Lifting active"
       }
     }
   }

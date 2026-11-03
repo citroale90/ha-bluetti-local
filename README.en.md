@@ -4,7 +4,9 @@
 
 Read-only, local Wi-Fi telemetry for the **BLUETTI Elite 30 V2 (EL30V2)**. No cloud account or Bluetooth connection is required by this integration. It is derived in part from the official BLUETTI integration, with a separate `bluetti_local` domain and an independently implemented local transport.
 
-**Preview release 0.4.0.** Tested with EL30V2 IoT firmware **8024.14** and Home Assistant **2026.10.4**. Other models, firmware versions and regions have not been validated. Long-term reliability over days or weeks has not yet been established. This is an independent project, not an official BLUETTI product.
+**Preview release 0.4.1.** Tested with EL30V2 IoT firmware **8024.14** and Home Assistant **2026.10.4**. Other models, firmware versions and regions have not been validated. Long-term reliability over days or weeks has not yet been established. This is an independent project, not an official BLUETTI product.
+
+Setup, options, all 23 entity names, and charging mode labels are available in English and Italian. Home Assistant handles language selection. Upgrading preserves existing entity IDs and custom names.
 
 ## What it provides
 

@@ -23,12 +23,12 @@ DNS_EXTERNAL = "external"
 
 # Function codes are kept from the official entity model where applicable.
 SENSORS = (
-    ("SOC", "battery_pct", "Batteria", "SensorDeviceClass.BATTERY"),
-    ("ACLoadAllTotalPower", "ac_output_w", "Uscita AC", "SensorDeviceClass.POWER"),
-    ("DCLoadAllTotalPower", "dc_output_w", "Uscita DC", "SensorDeviceClass.POWER"),
-    ("PVAllTotalPower", "dc_input_w", "Ingresso DC", "SensorDeviceClass.POWER"),
-    ("GridAllTotalPower", "grid_input_w", "Ingresso rete", "SensorDeviceClass.POWER"),
-    ("GridInputVoltage", "grid_voltage_v", "Tensione rete", "SensorDeviceClass.VOLTAGE"),
-    ("TotalOutputPower", "total_output_w", "Uscita totale", "SensorDeviceClass.POWER"),
-    ("TotalInputPower", "total_input_w", "Ingresso totale", "SensorDeviceClass.POWER"),
+    ("SOC", "battery_pct", "SensorDeviceClass.BATTERY"),
+    ("ACLoadAllTotalPower", "ac_output_w", "SensorDeviceClass.POWER"),
+    ("DCLoadAllTotalPower", "dc_output_w", "SensorDeviceClass.POWER"),
+    ("PVAllTotalPower", "dc_input_w", "SensorDeviceClass.POWER"),
+    ("GridAllTotalPower", "grid_input_w", "SensorDeviceClass.POWER"),
+    ("GridInputVoltage", "grid_voltage_v", "SensorDeviceClass.VOLTAGE"),
+    ("TotalOutputPower", "total_output_w", "SensorDeviceClass.POWER"),
+    ("TotalInputPower", "total_input_w", "SensorDeviceClass.POWER"),
 )

@@ -10,8 +10,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
     device = entry.runtime_data.device
     async_add_entities([
         BluettiBinarySensor(device),
-        BluettiOutputSensor(device, "SetCtrlAc", "ac_output_enabled", "Uscita AC abilitata", "mdi:power-socket-eu"),
-        BluettiOutputSensor(device, "SetCtrlDc", "dc_output_enabled", "Uscita DC abilitata", "mdi:current-dc"),
+        BluettiOutputSensor(device, "SetCtrlAc", "ac_output_enabled", "mdi:power-socket-eu"),
+        BluettiOutputSensor(device, "SetCtrlDc", "dc_output_enabled", "mdi:current-dc"),
     ])
     setup_discovered_entities(hass, entry, async_add_entities, DiscoveredBinarySensor, binary=True)
 
@@ -19,7 +19,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class BluettiBinarySensor(BinarySensorEntity):
     _attr_should_poll = False
     _attr_has_entity_name = True
-    _attr_name = "Telemetria locale"
+    _attr_translation_key = "local_connected"
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:lan-connect"
@@ -52,11 +52,11 @@ class BluettiOutputSensor(BluettiBinarySensor):
     _attr_device_class = None
     _attr_entity_category = None
 
-    def __init__(self, device, code, field, name, icon):
+    def __init__(self, device, code, field, icon):
         super().__init__(device)
         self._field = field
         self._attr_unique_id = f"{device.device_id}_{code}"
-        self._attr_name = name
+        self._attr_translation_key = field
         self._attr_icon = icon
 
     @property

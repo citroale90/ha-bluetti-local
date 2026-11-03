@@ -37,7 +37,7 @@ class DiscoveredEntity:
         self._field = field
         self._unsubscribe = None
         self._attr_unique_id = f"{device.device_id}_{field.code}"
-        self._attr_name = field.name
+        self._attr_translation_key = field.key
         self._attr_icon = field.icon
         self._attr_entity_category = EntityCategory.DIAGNOSTIC if field.diagnostic else None
         self._attr_device_info = {"identifiers": {(DOMAIN, device.device_id)}, "name": device.name,

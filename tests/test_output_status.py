@@ -65,7 +65,7 @@ class OutputModelTests(unittest.TestCase):
     def setUp(self):
         self.now = 100
         self.device = BluettiDevice('123456789', 'Test UPS', lambda: self.now)
-        self.ac = BluettiOutputSensor(self.device, 'SetCtrlAc', 'ac_output_enabled', 'Uscita AC abilitata', 'mdi:power-socket-eu')
+        self.ac = BluettiOutputSensor(self.device, 'SetCtrlAc', 'ac_output_enabled', 'mdi:power-socket-eu')
 
     def test_missing_status_is_unavailable_even_with_live_power(self):
         self.device.accept_sample(sample())

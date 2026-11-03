@@ -12,7 +12,6 @@ import struct
 class Field:
     key: str
     code: str
-    name: str
     address: int
     kind: str = "uint"
     words: int = 1
@@ -25,25 +24,25 @@ class Field:
 
 
 FIELDS = (
-    Field("battery_pct", "SOC", "Batteria", 102, maximum=100, legacy=True),
-    Field("remaining_hours", "TimeRemaining", "Tempo rimanente stimato", 104, "remaining", unit="h", device_class="duration", icon="mdi:timer-sand"),
-    Field("reported_model", "ReportedModel", "Modello rilevato", 110, "model", 6, diagnostic=True, icon="mdi:information-outline"),
-    Field("reported_serial", "ReportedSerial", "Numero di serie rilevato", 116, "serial", 4, diagnostic=True, icon="mdi:identifier"),
-    Field("dc_output_w", "DCLoadAllTotalPower", "Uscita DC", 140, maximum=6000, legacy=True),
-    Field("ac_output_w", "ACLoadAllTotalPower", "Uscita AC", 142, maximum=6000, legacy=True),
-    Field("dc_input_w", "PVAllTotalPower", "Ingresso DC", 144, maximum=6000, legacy=True),
-    Field("grid_input_w", "GridAllTotalPower", "Ingresso rete", 146, maximum=6000, legacy=True),
-    Field("grid_voltage_v", "GridInputVoltage", "Tensione rete", 1314, "voltage", maximum=3000, legacy=True),
-    Field("ac_output_enabled", "SetCtrlAc", "Uscita AC abilitata", 2011, "bool", legacy=True),
-    Field("dc_output_enabled", "SetCtrlDc", "Uscita DC abilitata", 2012, "bool", legacy=True),
-    Field("eco_dc_enabled", "EcoDc", "ECO DC attivo", 2014, "bool", icon="mdi:leaf"),
-    Field("eco_dc_hours", "EcoDcHours", "ECO DC tempo di spegnimento", 2015, "eco_hours", unit="h", device_class="duration", icon="mdi:timer-outline"),
-    Field("eco_dc_threshold_w", "EcoDcThreshold", "ECO DC soglia di potenza", 2016, unit="W", device_class="power", icon="mdi:flash-outline"),
-    Field("eco_ac_enabled", "EcoAc", "ECO AC attivo", 2017, "bool", icon="mdi:leaf"),
-    Field("eco_ac_hours", "EcoAcHours", "ECO AC tempo di spegnimento", 2018, "eco_hours", unit="h", device_class="duration", icon="mdi:timer-outline"),
-    Field("eco_ac_threshold_w", "EcoAcThreshold", "ECO AC soglia di potenza", 2019, unit="W", device_class="power", icon="mdi:flash-outline"),
-    Field("charging_mode", "ChargingMode", "Modalità di ricarica", 2020, "charging", device_class="enum", icon="mdi:battery-charging"),
-    Field("power_lifting_enabled", "PowerLifting", "Power Lifting attivo", 2021, "bool", icon="mdi:lightning-bolt"),
+    Field("battery_pct", "SOC", 102, maximum=100, legacy=True),
+    Field("remaining_hours", "TimeRemaining", 104, "remaining", unit="h", device_class="duration", icon="mdi:timer-sand"),
+    Field("reported_model", "ReportedModel", 110, "model", 6, diagnostic=True, icon="mdi:information-outline"),
+    Field("reported_serial", "ReportedSerial", 116, "serial", 4, diagnostic=True, icon="mdi:identifier"),
+    Field("dc_output_w", "DCLoadAllTotalPower", 140, maximum=6000, legacy=True),
+    Field("ac_output_w", "ACLoadAllTotalPower", 142, maximum=6000, legacy=True),
+    Field("dc_input_w", "PVAllTotalPower", 144, maximum=6000, legacy=True),
+    Field("grid_input_w", "GridAllTotalPower", 146, maximum=6000, legacy=True),
+    Field("grid_voltage_v", "GridInputVoltage", 1314, "voltage", maximum=3000, legacy=True),
+    Field("ac_output_enabled", "SetCtrlAc", 2011, "bool", legacy=True),
+    Field("dc_output_enabled", "SetCtrlDc", 2012, "bool", legacy=True),
+    Field("eco_dc_enabled", "EcoDc", 2014, "bool", icon="mdi:leaf"),
+    Field("eco_dc_hours", "EcoDcHours", 2015, "eco_hours", unit="h", device_class="duration", icon="mdi:timer-outline"),
+    Field("eco_dc_threshold_w", "EcoDcThreshold", 2016, unit="W", device_class="power", icon="mdi:flash-outline"),
+    Field("eco_ac_enabled", "EcoAc", 2017, "bool", icon="mdi:leaf"),
+    Field("eco_ac_hours", "EcoAcHours", 2018, "eco_hours", unit="h", device_class="duration", icon="mdi:timer-outline"),
+    Field("eco_ac_threshold_w", "EcoAcThreshold", 2019, unit="W", device_class="power", icon="mdi:flash-outline"),
+    Field("charging_mode", "ChargingMode", 2020, "charging", device_class="enum", icon="mdi:battery-charging"),
+    Field("power_lifting_enabled", "PowerLifting", 2021, "bool", icon="mdi:lightning-bolt"),
 )
 PROFILE = {field.key: field for field in FIELDS}
 OPTIONAL_FIELDS = tuple(field for field in FIELDS if not field.legacy)

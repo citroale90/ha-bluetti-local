@@ -1,7 +1,7 @@
 {
   "domain": "bluetti_local",
   "name": "BLUETTI Local Wi-Fi",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "codeowners": ["@citroale90"],
   "config_flow": true,
   "documentation": "https://github.com/citroale90/ha-bluetti-local",
