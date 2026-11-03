@@ -21,6 +21,7 @@ FIELD_MAP = {
     'grid_input_w': (146, 1),
     'grid_voltage_v': (1314, 0.1),
 }
+OUTPUT_FIELD_MAP = {'ac_output_enabled': 2011, 'dc_output_enabled': 2012}
 
 
 def bootstrap_time():
@@ -43,7 +44,7 @@ def crc16(data):
     return value
 
 
-def decode_report(payload):
+def _report_registers(payload):
     if len(payload) < 19 or len(payload) > 512:
         raise ValueError('report length')
     if payload[:2] != b'\x01\xf8' or payload[10:12] != b'\x01\x10':
@@ -53,6 +54,11 @@ def decode_report(payload):
         raise ValueError('register length')
     if crc16(payload[10:-2]) != int.from_bytes(payload[-2:], 'little'):
         raise ValueError('register checksum')
+    return int.from_bytes(payload[2:4], 'big'), start, count
+
+
+def decode_report(payload):
+    cycle, start, count = _report_registers(payload)
     values = {}
     for name, (address, scale) in FIELD_MAP.items():
         if start <= address < start + count:
@@ -64,12 +70,27 @@ def decode_report(payload):
         raise ValueError('voltage range')
     if any(v > 6000 for k, v in values.items() if k.endswith('_w')):
         raise ValueError('power range')
-    return int.from_bytes(payload[2:4], 'big'), values
+    return cycle, values
+
+
+def decode_output_report(payload):
+    """Read the EL30V2 enable flags, never infer them from output power."""
+    cycle, start, count = _report_registers(payload)
+    values = {}
+    for name, address in OUTPUT_FIELD_MAP.items():
+        if start <= address < start + count:
+            raw = struct.unpack_from('>H', payload, 17 + 2 * (address - start))[0]
+            if raw not in (0, 1):
+                raise ValueError('unsupported output status')
+            values[name] = bool(raw)
+    return cycle, values
 
 
 class Samples:
-    """A sample is complete only when both register blocks share one report cycle."""
-    def __init__(self):
+    """Required fields must share one fresh, checksum-validated report cycle."""
+    def __init__(self, *, fields=FIELD_MAP, decoder=decode_report):
+        self.fields = tuple(fields)
+        self.decoder = decoder
         self.cycle = None
         self.since = None
         self.values = {}
@@ -80,7 +101,7 @@ class Samples:
     def receive(self, payload, now=None):
         now = time.monotonic() if now is None else now
         try:
-            cycle, values = decode_report(payload)
+            cycle, values = self.decoder(payload)
         except ValueError:
             self.invalid_reports += 1
             return None
@@ -92,9 +113,9 @@ class Samples:
         if cycle != self.cycle or self.since is None or now - self.since > 5:
             self.cycle, self.since, self.values = cycle, now, {}
         self.values.update(values)
-        if not FIELD_MAP.keys() <= self.values.keys():
+        if not self.values.keys() >= set(self.fields):
             return None
-        sample = {k: self.values[k] for k in FIELD_MAP}
+        sample = {k: self.values[k] for k in self.fields}
         if not self.last or self.last['report_cycle'] != cycle:
             self.last = {'transport': 'wifi-local-experimental', 'report_cycle': cycle,
                          'values': sample, 'validated_crc': True}
@@ -121,10 +142,12 @@ def remaining_length(value):
 
 class Protocol:
     """Vendor prelude plus the transport subset needed for unsolicited reports."""
-    def __init__(self, on_sample, epoch=None, expected_iot=None, expected_serial=None):
+    def __init__(self, on_sample, epoch=None, expected_iot=None, expected_serial=None, *, on_output_status=None):
         self.buffer = bytearray()
         self.samples = Samples()
         self.on_sample = on_sample
+        self.on_output_status = on_output_status
+        self.output_samples = Samples(fields=OUTPUT_FIELD_MAP, decoder=decode_output_report)
         self.epoch = epoch or bootstrap_time
         self.expected_iot = expected_iot
         self.expected_serial = expected_serial
@@ -262,6 +285,10 @@ class Protocol:
                 sample = self.samples.receive(body[position:])
                 if sample is not None:
                     self.on_sample(sample)
+                if self.on_output_status is not None:
+                    status = self.output_samples.receive(body[position:])
+                    if status is not None:
+                        self.on_output_status(status)
             elif kind == 12 and flags == 0 and not body and self.mqtt_seen:
                 replies.append(b'\xd0\x00')
             elif kind == 14 and flags == 0 and not body:

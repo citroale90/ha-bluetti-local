@@ -6,7 +6,12 @@ from .const import DOMAIN
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    async_add_entities([BluettiBinarySensor(entry.runtime_data.device)])
+    device = entry.runtime_data.device
+    async_add_entities([
+        BluettiBinarySensor(device),
+        BluettiOutputSensor(device, "SetCtrlAc", "ac_output_enabled", "Uscita AC abilitata", "mdi:power-socket-eu"),
+        BluettiOutputSensor(device, "SetCtrlDc", "dc_output_enabled", "Uscita DC abilitata", "mdi:current-dc"),
+    ])
 
 
 class BluettiBinarySensor(BinarySensorEntity):
@@ -38,3 +43,28 @@ class BluettiBinarySensor(BinarySensorEntity):
 
     async def async_will_remove_from_hass(self):
         self._device.remove_callback(self.async_write_ha_state)
+
+
+class BluettiOutputSensor(BluettiBinarySensor):
+    """Read-only output enable state from its own fresh register report."""
+    _attr_device_class = None
+    _attr_entity_category = None
+
+    def __init__(self, device, code, field, name, icon):
+        super().__init__(device)
+        self._field = field
+        self._attr_unique_id = f"{device.device_id}_{code}"
+        self._attr_name = name
+        self._attr_icon = icon
+
+    @property
+    def is_on(self):
+        return self._device.output_states[self._field]
+
+    @property
+    def available(self):
+        return self._device.outputs_online
+
+    @property
+    def extra_state_attributes(self):
+        return self._device.output_status_attributes

@@ -9,5 +9,13 @@
     "sensor.py": "823a1b35246bda586e6cd82faf551bf0149cc6ef9aa58d0b33b78aa8cdaebfb5",
     "icon_config.py": "5e0436a5a9775436680fede5a2392baa600a85f0a2d0a6f8bc92a7fbe35c4493",
     "const.py": "7ea38d6f4e1489ef139f7f4954d7627b93fd2a4a02eeef00b44b421531fefce0"
+  },
+  "output_status_register_reference": {
+    "source": "https://github.com/Patrick762/bluetti-bt-lib/blob/main/bluetti_bt_lib/devices/el30v2.py",
+    "registers": {
+      "ac_output_enabled": 2011,
+      "dc_output_enabled": 2012
+    },
+    "validation": "Cross-checked with passive EL30V2 Wi-Fi reports; no source code copied."
   }
 }

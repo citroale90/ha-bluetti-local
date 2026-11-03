@@ -84,7 +84,7 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
         await self.setup_entry()
         states=self.hass.states.async_all()
         self.assertEqual(len([s for s in states if s.entity_id.startswith('sensor.test_ups_')]),9)
-        self.assertEqual(len([s for s in states if s.entity_id.startswith('binary_sensor.test_ups_')]),1)
+        self.assertEqual(len([s for s in states if s.entity_id.startswith('binary_sensor.test_ups_')]),3)
         self.assertFalse([s for s in states if s.entity_id.startswith(('switch.','button.','select.'))])
         self.assertEqual(self.hass.states.get('sensor.test_ups_batteria').state,'unavailable')
 
@@ -244,3 +244,35 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await asyncio.wait_for(reader.read(1),1),b'')
         _,new_writer=await self.connect();await self.send_sample(new_writer,2)
         self.assertTrue(self.entry.runtime_data.device.online)
+
+    async def test_output_flags_are_read_only_and_reach_homeassistant_at_zero_load(self):
+        await self.setup_entry();_,writer=await self.connect()
+        writer.write(publish(report(values={102:99,140:0,142:0,144:0,146:0}))+publish(report(start=1300,values={1314:2381})))
+        await writer.drain();await asyncio.sleep(.05);await self.hass.async_block_till_done()
+        ac='binary_sensor.test_ups_uscita_ac_abilitata'
+        dc='binary_sensor.test_ups_uscita_dc_abilitata'
+        self.assertEqual(self.hass.states.get(ac).state,'unavailable')
+        writer.write(publish(report(start=2000,values={2011:1,2012:0})))
+        await writer.drain();await asyncio.sleep(.05);await self.hass.async_block_till_done()
+        self.assertEqual(self.hass.states.get(ac).state,'on')
+        self.assertEqual(self.hass.states.get(dc).state,'off')
+        self.assertTrue(self.hass.states.get(ac).attributes['read_only'])
+        numeric_stamp=self.entry.runtime_data.device.last_successful_poll
+        self.assertEqual(self.entry.runtime_data.device.valid_samples,1)
+        writer.write(publish(report(cycle=2,start=2000,values={2011:0,2012:1})))
+        await writer.drain();await asyncio.sleep(.05);await self.hass.async_block_till_done()
+        self.assertEqual(self.hass.states.get(ac).state,'off')
+        self.assertEqual(self.hass.states.get(dc).state,'on')
+        self.assertEqual(self.entry.runtime_data.device.last_successful_poll,numeric_stamp)
+        self.assertFalse([s for s in self.hass.states.async_all() if s.entity_id.startswith(('switch.','button.','select.'))])
+
+    async def test_only_output_reports_cannot_keep_numeric_data_session_alive(self):
+        await self.setup_entry()
+        with patch('custom_components.bluetti_local.server.SAMPLE_TIMEOUT_SECONDS',.4):
+            reader,writer=await self.connect();await self.send_sample(writer)
+            for cycle in range(1,4):
+                writer.write(publish(report(cycle=cycle,start=2000,values={2011:1,2012:1})))
+                await writer.drain();await asyncio.sleep(.03)
+            self.assertEqual(await asyncio.wait_for(reader.read(1),1),b'')
+        self.assertEqual(self.entry.runtime_data.device.valid_samples,1)
+        self.assertFalse(self.entry.runtime_data.device.outputs_online)

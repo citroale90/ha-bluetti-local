@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import time
 
 from .const import MODEL, SENSORS, STALE_SECONDS
-from .protocol import FIELD_MAP
+from .protocol import FIELD_MAP, OUTPUT_FIELD_MAP
 
 
 class BluettiState:
@@ -46,6 +46,12 @@ class BluettiDevice:
         self.last_successful_poll: datetime | None = None
         self.report_cycle = None
         self.valid_samples = 0
+        self.output_states = {name: None for name in OUTPUT_FIELD_MAP}
+        self._output_sample_time = None
+        self._announced_outputs_online = False
+        self.last_output_status = None
+        self.output_report_cycle = None
+        self.valid_output_samples = 0
 
     def get_state(self, fn_code):
         return next((s for s in self.states if s.fn_code == fn_code), None)
@@ -58,6 +64,7 @@ class BluettiDevice:
 
     def publish_updates(self):
         self._announced_online = self.online
+        self._announced_outputs_online = self.outputs_online
         for callback in tuple(self._callbacks):
             callback()
 
@@ -84,13 +91,35 @@ class BluettiDevice:
         self.valid_samples += 1
         self.publish_updates()
 
+    @property
+    def outputs_online(self):
+        if not self.online or self._output_sample_time is None:
+            return False
+        return 0 <= self._clock() - self._output_sample_time <= STALE_SECONDS
+
+    def accept_output_status(self, sample):
+        values = sample.get("values", {})
+        if (sample.get("validated_crc") is not True
+                or not OUTPUT_FIELD_MAP.keys() <= values.keys()
+                or any(type(values[name]) is not bool for name in OUTPUT_FIELD_MAP)):
+            raise ValueError("Incomplete or unvalidated output status")
+        self.output_states = {name: values[name] for name in OUTPUT_FIELD_MAP}
+        self._output_sample_time = self._clock()
+        self.last_output_status = datetime.now(timezone.utc)
+        self.output_report_cycle = sample["report_cycle"]
+        self.valid_output_samples += 1
+        # These reports never renew the numeric telemetry/watchdog timestamp.
+        self.publish_updates()
+
     def disconnect(self):
         self._connected = False
-        if self._announced_online:
+        self._output_sample_time = None
+        if self._announced_online or self._announced_outputs_online:
             self.publish_updates()
 
     def check_freshness(self):
-        if self.online != self._announced_online:
+        if (self.online != self._announced_online
+                or self.outputs_online != self._announced_outputs_online):
             self.publish_updates()
 
     @property
@@ -101,6 +130,18 @@ class BluettiDevice:
             "last_successful_poll": self.last_successful_poll.isoformat() if self.last_successful_poll else None,
             "report_cycle": self.report_cycle,
             "valid_samples": self.valid_samples,
+            "stale_after_seconds": STALE_SECONDS,
+            "read_only": True,
+        }
+
+    @property
+    def output_status_attributes(self):
+        return {
+            "transport": "wifi_local",
+            "validated_crc": self.last_output_status is not None,
+            "last_successful_poll": self.last_output_status.isoformat() if self.last_output_status else None,
+            "report_cycle": self.output_report_cycle,
+            "valid_samples": self.valid_output_samples,
             "stale_after_seconds": STALE_SECONDS,
             "read_only": True,
         }

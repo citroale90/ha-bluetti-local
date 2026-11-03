@@ -4,17 +4,22 @@
 
 Read-only, local Wi-Fi telemetry for the **BLUETTI Elite 30 V2 (EL30V2)**. No cloud account or Bluetooth connection is required by this integration. It is derived in part from the official BLUETTI integration, with a separate `bluetti_local` domain and an independently implemented local transport.
 
-**Preview release 0.3.0.** Tested with EL30V2 IoT firmware **8024.14** and Home Assistant **2026.10.4**. Other models, firmware versions and regions have not been validated. Long-term reliability over days or weeks has not yet been established. This is an independent project, not an official BLUETTI product.
+**Preview release 0.3.1.** Tested with EL30V2 IoT firmware **8024.14** and Home Assistant **2026.10.4**. Other models, firmware versions and regions have not been validated. Long-term reliability over days or weeks has not yet been established. This is an independent project, not an official BLUETTI product.
 
 ## What it provides
 
 - Battery percentage, AC/DC output power, grid/DC input power and grid voltage.
+- Read-only AC/DC output enable indicators from registers 2011 and 2012.
 - Total input/output power calculated from the same complete report.
 - A last-valid-sample timestamp and a local telemetry connection sensor.
 - Availability based on a live connection and a complete, CRC-checked report no older than 90 seconds.
 - Bundled brand icons served locally by Home Assistant.
 
-There are no AC/DC output switches, firmware actions, reboot commands or automatic shutdown services. The component only emits bootstrap and MQTT transport acknowledgements. It does not forward cloud commands.
+The output indicators report explicit 0/1 register values, independently of wattage. Enabled at zero watts remains enabled. Each complete status report has its own CRC, cycle and 90-second freshness; it cannot renew numeric telemetry or watchdog freshness. Missing/stale reports and a reconnect without a new report leave those indicators unavailable. Unsupported flag values are ignored without renewing freshness.
+
+The register map is cross-checked with [the EL30V2 reference](https://github.com/Patrick762/bluetti-bt-lib/blob/main/bluetti_bt_lib/devices/el30v2.py), recorded Wi-Fi reports and all four synthetic flag combinations. Version 0.3.1 passes 95 isolated tests. Physical validation reads existing states without toggling either output.
+
+There are no writable AC/DC output switches, firmware actions, reboot commands or automatic shutdown services. The component only emits bootstrap and MQTT transport acknowledgements. It does not forward cloud commands.
 
 ## Install
 

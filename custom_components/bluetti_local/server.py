@@ -101,7 +101,8 @@ class LocalReceiver:
             self.device.disconnect()
         self._tasks.add(task)
         self._writer = writer
-        protocol = Protocol(self.device.accept_sample, expected_serial=self.device.sn)
+        protocol = Protocol(self.device.accept_sample, expected_serial=self.device.sn,
+                            on_output_status=self.device.accept_output_status)
         handshake_deadline = asyncio.get_running_loop().time() + 15
         sample_deadline = asyncio.get_running_loop().time() + SAMPLE_TIMEOUT_SECONDS
         try:
@@ -153,6 +154,8 @@ class LocalReceiver:
             "valid_samples": self.device.valid_samples,
             "protocol_errors": self.protocol_errors,
             "telemetry_reconnects": self.telemetry_reconnects,
+            "valid_output_status_samples": self.device.valid_output_samples,
+            "fresh_output_status_available": self.device.outputs_online,
             "rejected_connections": self.rejected_connections,
             "read_only": True,
             "local_dns_answers": self.dns.answers if self.dns else 0,

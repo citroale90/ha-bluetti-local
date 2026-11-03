@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1 — 2026-11-03 (preview)
+
+- Restore read-only AC/DC enabled indicators from explicit registers 2011/2012. Zero watts does not imply an output is disabled.
+- Separate status freshness, CRC/cycle validation and reconnect invalidation; output reports never renew numeric or watchdog freshness.
+- Retain all existing numeric entity identifiers and automatic networking behavior. No control commands added.
+- 95 isolated tests; five recorded frames compared with the existing BLE decoder, plus all four synthetic on/off combinations. Physical output switching was not performed.
+
 ## 0.3.0 — 2026-11-03 (preview)
 
 - Close accepted MQTT/DNS clients before waiting for listeners, preventing reload/shutdown stalls with an active connection.
