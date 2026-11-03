@@ -4,7 +4,7 @@
 
 Read-only, local Wi-Fi telemetry for the **BLUETTI Elite 30 V2 (EL30V2)**. No cloud account or Bluetooth connection is required by this integration. It is derived in part from the official BLUETTI integration, with a separate `bluetti_local` domain and an independently implemented local transport.
 
-**Preview release 0.3.1.** Tested with EL30V2 IoT firmware **8024.14** and Home Assistant **2026.10.4**. Other models, firmware versions and regions have not been validated. Long-term reliability over days or weeks has not yet been established. This is an independent project, not an official BLUETTI product.
+**Preview release 0.4.0.** Tested with EL30V2 IoT firmware **8024.14** and Home Assistant **2026.10.4**. Other models, firmware versions and regions have not been validated. Long-term reliability over days or weeks has not yet been established. This is an independent project, not an official BLUETTI product.
 
 ## What it provides
 
@@ -17,7 +17,17 @@ Read-only, local Wi-Fi telemetry for the **BLUETTI Elite 30 V2 (EL30V2)**. No cl
 
 The output indicators report explicit 0/1 register values, independently of wattage. Enabled at zero watts remains enabled. Each complete status report has its own CRC, cycle and 90-second freshness; it cannot renew numeric telemetry or watchdog freshness. Missing/stale reports and a reconnect without a new report leave those indicators unavailable. Unsupported flag values are ignored without renewing freshness.
 
-The register map is cross-checked with [the EL30V2 reference](https://github.com/Patrick762/bluetti-bt-lib/blob/main/bluetti_bt_lib/devices/el30v2.py), recorded Wi-Fi reports and all four synthetic flag combinations. Version 0.3.1 passes 95 isolated tests. Physical validation reads existing states without toggling either output.
+### Continuous entity discovery
+
+Version 0.4.0 automatically recognizes **all 19 readable fields in the known EL30V2 profile**. The previous 12 entities retain their IDs. Additional entities are created after two valid, distinct report cycles, including fields first received after startup. With all fields observed, the integration exposes **23 entities**: 19 readings, two derived totals and two connection diagnostics.
+
+Additional fields cover remaining time, AC/DC ECO enable states, ECO shutdown durations and power thresholds, charging mode, Power Lifting, and reported model/serial diagnostics. Settings are represented only as sensors or binary sensors. Remaining time follows the device's generic estimate in hours; it is not classified as charge/discharge time.
+
+Discovery runs continuously without a reload or manual entity definitions. HA's native entity registry retains identities, user names and disabled settings across reload/restart. Values are not cached: restored entities remain unavailable until new data arrives. Each field expires independently after 90 seconds; optional reports never renew core telemetry or watchdog freshness.
+
+**Reports contain numeric registers, not self-describing entity metadata.** Discovery is limited to the verified `profile.py` map. Unknown registers and unsupported values do not become guessed entities; new fields/models need a verified profile. Diagnostics expose known observed/confirmed/fresh field keys, without values, serials or raw packets.
+
+The map is cross-checked with [the EL30V2 reference](https://github.com/Patrick762/bluetti-bt-lib/blob/main/bluetti_bt_lib/devices/el30v2.py) and passive Wi-Fi reports: **19 fields, 87 matching comparisons, at least four distinct cycles per field**. Decoding is independently implemented without a runtime BLE dependency. Version 0.4.0 passes **114 isolated tests** in HA 2026.10.4, covering late discovery, reload persistence, user-disabled entities and independent field expiry. Physical validation reads existing states without toggling outputs.
 
 There are no writable AC/DC output switches, firmware actions, reboot commands or automatic shutdown services. The component only emits bootstrap and MQTT transport acknowledgements. It does not forward cloud commands.
 

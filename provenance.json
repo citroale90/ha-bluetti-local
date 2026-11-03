@@ -17,5 +17,12 @@
       "dc_output_enabled": 2012
     },
     "validation": "Cross-checked with passive EL30V2 Wi-Fi reports; no source code copied."
+  },
+  "readable_profile_reference": {
+    "source": "https://github.com/Patrick762/bluetti-bt-lib/blob/main/bluetti_bt_lib/devices/el30v2.py",
+    "base_fields_source": "https://github.com/Patrick762/bluetti-bt-lib/blob/main/bluetti_bt_lib/devices/base_device_v2.py",
+    "fields": 19,
+    "implementation": "Independent read-only decoder using register addresses, formats, enum values and scales; no dependency or copied reference classes.",
+    "validation": "19 fields compared against passive Wi-Fi reports and installed reference parser, 87 matching values across at least four cycles per field."
   }
 }

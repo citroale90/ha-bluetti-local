@@ -104,5 +104,16 @@
         "builtin": "DNS integrato — porta 53, assegnato al solo UPS"
       }
     }
+  },
+  "entity": {
+    "sensor": {
+      "charging_mode": {
+        "state": {
+          "standard": "Standard",
+          "silent": "Silenziosa",
+          "turbo": "Turbo"
+        }
+      }
+    }
   }
 }

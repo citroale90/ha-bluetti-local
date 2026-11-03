@@ -2,6 +2,7 @@
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
 from homeassistant.const import EntityCategory
 
+from .discovery_entity import DiscoveredEntity, setup_discovered_entities
 from .const import DOMAIN
 
 
@@ -12,6 +13,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         BluettiOutputSensor(device, "SetCtrlAc", "ac_output_enabled", "Uscita AC abilitata", "mdi:power-socket-eu"),
         BluettiOutputSensor(device, "SetCtrlDc", "dc_output_enabled", "Uscita DC abilitata", "mdi:current-dc"),
     ])
+    setup_discovered_entities(hass, entry, async_add_entities, DiscoveredBinarySensor, binary=True)
 
 
 class BluettiBinarySensor(BinarySensorEntity):
@@ -68,3 +70,10 @@ class BluettiOutputSensor(BluettiBinarySensor):
     @property
     def extra_state_attributes(self):
         return self._device.output_status_attributes
+
+
+class DiscoveredBinarySensor(DiscoveredEntity, BinarySensorEntity):
+    """Observed ECO/Power Lifting flags; never an output switch."""
+    @property
+    def is_on(self):
+        return self._device.discovery.observations[self._field.key].value

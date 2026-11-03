@@ -7,6 +7,8 @@ from __future__ import annotations
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
 from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfElectricPotential, UnitOfPower
 
+from .discovery_entity import DiscoveredEntity, setup_discovered_entities
+from .profile import CHARGING_OPTIONS
 from .const import DOMAIN
 from .icon_config import get_icon_for_fn_code
 
@@ -24,6 +26,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     device = entry.runtime_data.device
     async_add_entities([BluettiSensor(device, state, SENSOR_MAP[state.sensor_info["sensorType"]])
                         for state in device.states] + [LastSampleSensor(device)])
+    setup_discovered_entities(hass, entry, async_add_entities, DiscoveredSensor, binary=False)
 
 
 class BluettiSensor(SensorEntity):
@@ -80,3 +83,20 @@ class LastSampleSensor(BluettiSensor):
     @property
     def available(self):
         return True
+
+
+class DiscoveredSensor(DiscoveredEntity, SensorEntity):
+    """A sensor added when its known register has been confirmed on the wire."""
+    def __init__(self, device, field):
+        super().__init__(device, field)
+        self._attr_device_class = field.device_class
+        self._attr_native_unit_of_measurement = field.unit
+        if field.kind == "remaining":
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+        if field.kind == "charging":
+            self._attr_options = list(CHARGING_OPTIONS)
+            self._attr_translation_key = "charging_mode"
+
+    @property
+    def native_value(self):
+        return self._device.discovery.observations[self._field.key].value

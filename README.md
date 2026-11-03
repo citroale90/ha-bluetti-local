@@ -8,7 +8,7 @@ Il dominio `bluetti_local` è indipendente da `bluetti` e `bluetti_bt`. La disin
 
 ## Stato del lavoro
 
-Versione **0.3.1 in anteprima**. Il protocollo è stato verificato su EL30V2 con firmware IoT 8024.14: acquisizione passiva, confronto con la mappa registri e prova diretta del ricevitore. Il collaudo dell’integrazione completa in Home Assistant e la verifica di stabilità prolungata sono registrati separatamente dai test del solo protocollo.
+Versione **0.4.0 in anteprima**. Il protocollo è stato verificato su EL30V2 con firmware IoT 8024.14: acquisizione passiva, confronto con la mappa registri e prova diretta del ricevitore. Il collaudo dell’integrazione completa in Home Assistant e la verifica di stabilità prolungata sono registrati separatamente dai test del solo protocollo.
 
 Il supporto di altri modelli BLUETTI richiede prove e mappe registri dedicate.
 
@@ -38,7 +38,25 @@ I sensori diventano `unavailable` quando il collegamento si chiude oppure quando
 
 Dalla 0.3.1 i due stati delle uscite sono indicatori `binary_sensor`, non comandi. Il valore 1 indica abilitata, 0 disabilitata; altri valori non vengono interpretati. Un’uscita può essere abilitata anche a 0 W. Il blocco di stato ha checksum, ciclo e freschezza propri (90 secondi): dati assenti, scaduti o una nuova connessione senza un nuovo rapporto rendono gli indicatori indisponibili. Questi rapporti non rinnovano il timestamp delle misure numeriche usate dal watchdog.
 
-La mappa dei registri è confrontata con [bluetti-bt-lib per EL30V2](https://github.com/Patrick762/bluetti-bt-lib/blob/main/bluetti_bt_lib/devices/el30v2.py), con i messaggi Wi-Fi registrati e con tutte e quattro le combinazioni simulate. Il collaudo fisico legge gli stati già presenti; non sono state commutate le uscite per provare il cambio di stato. La 0.3.1 supera 95 test isolati.
+### Scoperta continua delle entità
+
+La 0.4.0 riconosce automaticamente **tutti i 19 campi leggibili del profilo EL30V2 noto**. Le 12 entità precedenti conservano i loro identificatori; i campi aggiuntivi diventano entità dopo due rapporti validi di cicli distinti, anche se arrivano dopo l'avvio. Con tutti i campi osservati si ottengono **23 entità**: 19 letture, due potenze totali calcolate e due diagnostiche del collegamento.
+
+| Nuove entità scoperte | Significato |
+| --- | --- |
+| Tempo rimanente stimato | Valore trasmesso dal dispositivo, in ore; non distinto fra carica e scarica |
+| ECO AC / DC attivo | Indicatori in sola lettura |
+| ECO AC / DC tempo di spegnimento | Durata configurata: 1, 2, 3 o 4 ore |
+| ECO AC / DC soglia di potenza | Soglie configurate, in watt |
+| Modalità di ricarica | Standard, Silenziosa o Turbo |
+| Power Lifting attivo | Indicatore in sola lettura |
+| Modello e numero di serie rilevati | Diagnostica ricavata dal rapporto e verificata con il dispositivo configurato |
+
+Non occorre aggiungere manualmente le entità o ricaricare l'integrazione. Il registro nativo di Home Assistant ne conserva identità, nomi personalizzati e disabilitazioni. Dopo un riavvio vengono ricreate senza ripristinare valori vecchi; tornano disponibili quando arrivano dati validi. Ogni nuovo campo ha una propria scadenza di 90 secondi: altri rapporti non ne rinnovano la freschezza e non aggiornano il timestamp numerico usato dal watchdog.
+
+**Il dispositivo non invia un catalogo con i significati dei registri.** La scoperta riguarda il profilo verificato in `profile.py`; registri sconosciuti e valori non supportati non producono entità inventate. Il supporto di nuovi campi/modelli richiede una mappa verificata. La diagnostica mostra i campi noti osservati/confermati/recenti, senza valori, seriali o pacchetti grezzi.
+
+La mappa è confrontata con [bluetti-bt-lib per EL30V2](https://github.com/Patrick762/bluetti-bt-lib/blob/main/bluetti_bt_lib/devices/el30v2.py) e con i rapporti Wi-Fi: **19 campi, 87 confronti concordanti, almeno quattro cicli distinti per campo**. Il decodificatore è indipendente e non richiede quella libreria né avvia il Bluetooth. La 0.4.0 supera **114 test isolati** in Home Assistant 2026.10.4, compresi creazione a caldo, ricarica senza doppioni, disabilitazioni utente e scadenza dei singoli campi. Il collaudo fisico legge gli stati già presenti: non sono state commutate le uscite.
 
 Questa versione espone il monitoraggio. Non registra servizi, pulsanti, interruttori AC/DC, comandi di spegnimento o aggiornamenti del firmware.
 

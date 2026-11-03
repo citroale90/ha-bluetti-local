@@ -16,8 +16,8 @@
         }
       },
       "network": {
-        "title": "Configure this UPS’s network",
-        "description": "Home Assistant must run on the UPS’s Linux router. Three redirects are scoped to {device_ip} and {receiver_ip}. Two fresh reports are required within three minutes. Stop, reload, disable or removal deletes its rules. No permanent Internet block or AC/DC commands.",
+        "title": "Configure this UPS\u2019s network",
+        "description": "Home Assistant must run on the UPS\u2019s Linux router. Three redirects are scoped to {device_ip} and {receiver_ip}. Two fresh reports are required within three minutes. Stop, reload, disable or removal deletes its rules. No permanent Internet block or AC/DC commands.",
         "data": {
           "interface": "Incoming UPS LAN interface",
           "confirm": "I confirm the topology and UPS-only rules"
@@ -62,8 +62,8 @@
         }
       },
       "network": {
-        "title": "Configure this UPS’s network",
-        "description": "Home Assistant must run on the UPS’s Linux router. Three redirects are scoped to {device_ip} and {receiver_ip}. Two fresh reports are required within three minutes. Stop, reload, disable or removal deletes its rules. No permanent Internet block or AC/DC commands.",
+        "title": "Configure this UPS\u2019s network",
+        "description": "Home Assistant must run on the UPS\u2019s Linux router. Three redirects are scoped to {device_ip} and {receiver_ip}. Two fresh reports are required within three minutes. Stop, reload, disable or removal deletes its rules. No permanent Internet block or AC/DC commands.",
         "data": {
           "interface": "Incoming UPS LAN interface",
           "confirm": "I confirm the topology and UPS-only rules"
@@ -93,15 +93,26 @@
   "selector": {
     "network_mode": {
       "options": {
-        "manual": "Manual — router already configured",
-        "automatic": "Automatic — Home Assistant on Linux router",
-        "direct_dns": "Direct DNS — Home Assistant on a separate host"
+        "manual": "Manual \u2014 router already configured",
+        "automatic": "Automatic \u2014 Home Assistant on Linux router",
+        "direct_dns": "Direct DNS \u2014 Home Assistant on a separate host"
       }
     },
     "dns_source": {
       "options": {
-        "external": "Existing local DNS — Pi-hole / AdGuard Home / router",
-        "builtin": "Built-in DNS — port 53, assigned only to this UPS"
+        "external": "Existing local DNS \u2014 Pi-hole / AdGuard Home / router",
+        "builtin": "Built-in DNS \u2014 port 53, assigned only to this UPS"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "charging_mode": {
+        "state": {
+          "standard": "Standard",
+          "silent": "Silent",
+          "turbo": "Turbo"
+        }
       }
     }
   }

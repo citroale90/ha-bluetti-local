@@ -11,6 +11,7 @@ import time
 
 from .const import MODEL, SENSORS, STALE_SECONDS
 from .protocol import FIELD_MAP, OUTPUT_FIELD_MAP
+from .discovery import Discovery
 
 
 class BluettiState:
@@ -52,6 +53,7 @@ class BluettiDevice:
         self.last_output_status = None
         self.output_report_cycle = None
         self.valid_output_samples = 0
+        self.discovery = Discovery(self)
 
     def get_state(self, fn_code):
         return next((s for s in self.states if s.fn_code == fn_code), None)
@@ -65,6 +67,7 @@ class BluettiDevice:
     def publish_updates(self):
         self._announced_online = self.online
         self._announced_outputs_online = self.outputs_online
+        self.discovery.notify()
         for callback in tuple(self._callbacks):
             callback()
 
@@ -114,10 +117,12 @@ class BluettiDevice:
     def disconnect(self):
         self._connected = False
         self._output_sample_time = None
+        self.discovery.disconnect()
         if self._announced_online or self._announced_outputs_online:
             self.publish_updates()
 
     def check_freshness(self):
+        self.discovery.check_freshness()
         if (self.online != self._announced_online
                 or self.outputs_online != self._announced_outputs_online):
             self.publish_updates()

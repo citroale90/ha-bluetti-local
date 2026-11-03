@@ -104,5 +104,16 @@
         "builtin": "Built-in DNS — port 53, assigned only to this UPS"
       }
     }
+  },
+  "entity": {
+    "sensor": {
+      "charging_mode": {
+        "state": {
+          "standard": "Standard",
+          "silent": "Silent",
+          "turbo": "Turbo"
+        }
+      }
+    }
   }
 }

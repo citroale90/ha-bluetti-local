@@ -276,3 +276,73 @@ class HomeAssistantTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(await asyncio.wait_for(reader.read(1),1),b'')
         self.assertEqual(self.entry.runtime_data.device.valid_samples,1)
         self.assertFalse(self.entry.runtime_data.device.outputs_online)
+
+    async def send_profile(self, writer, cycle):
+        from test_discovery import full_reports
+        for payload in full_reports(cycle):writer.write(publish(payload))
+        await writer.drain();await asyncio.sleep(.05);await self.hass.async_block_till_done()
+
+    async def test_continuous_discovery_creates_all_supported_entities_without_reload(self):
+        await self.setup_entry();_,writer=await self.connect()
+        initial=entity_registry.async_entries_for_config_entry(entity_registry.async_get(self.hass),self.entry.entry_id)
+        initial_ids={r.unique_id:r.entity_id for r in initial}
+        await self.send_profile(writer,1)
+        self.assertEqual(len(entity_registry.async_entries_for_config_entry(entity_registry.async_get(self.hass),self.entry.entry_id)),12)
+        await self.send_profile(writer,2)
+        rows=entity_registry.async_entries_for_config_entry(entity_registry.async_get(self.hass),self.entry.entry_id)
+        self.assertEqual(len(rows),23)
+        self.assertTrue(all(r.domain in ('sensor','binary_sensor') for r in rows))
+        self.assertTrue(all(initial_ids.get(r.unique_id,r.entity_id)==r.entity_id for r in rows))
+        for row in rows:
+            state=self.hass.states.get(row.entity_id)
+            self.assertNotIn(state.state,('unknown','unavailable'),row.entity_id)
+        mode=self.hass.states.get('sensor.test_ups_modalita_di_ricarica')
+        self.assertEqual(mode.state,'standard')
+        self.assertEqual(mode.attributes['options'],['standard','silent','turbo'])
+        await self.send_profile(writer,3)
+        self.assertEqual(len(entity_registry.async_entries_for_config_entry(entity_registry.async_get(self.hass),self.entry.entry_id)),23)
+
+    async def test_discovered_entities_restore_on_reload_without_old_values_or_duplicates(self):
+        await self.setup_entry();_,writer=await self.connect()
+        await self.send_profile(writer,1);await self.send_profile(writer,2)
+        registry=entity_registry.async_get(self.hass)
+        before={r.unique_id:r.entity_id for r in entity_registry.async_entries_for_config_entry(registry,self.entry.entry_id)}
+        old=self.entry.runtime_data.device.discovery
+        self.assertTrue(await self.hass.config_entries.async_reload(self.entry.entry_id))
+        await self.hass.async_block_till_done()
+        self.assertFalse(old._callbacks);self.assertFalse(old._discovery_callbacks)
+        for key in ['TimeRemaining','EcoAc','ChargingMode','ReportedSerial']:
+            self.assertEqual(self.hass.states.get(before['123456789_'+key]).state,'unavailable')
+        _,writer=await self.connect();await self.send_profile(writer,1)
+        after={r.unique_id:r.entity_id for r in entity_registry.async_entries_for_config_entry(registry,self.entry.entry_id)}
+        self.assertEqual(before,after)
+        self.assertEqual(self.hass.states.get(before['123456789_TimeRemaining']).state,'0.1002')
+
+    async def test_late_new_field_and_user_disabled_entity(self):
+        await self.setup_entry();_,writer=await self.connect()
+        await self.send_sample(writer,1);await self.send_sample(writer,2)
+        # Late settings group: no reconnect or reload required.
+        from test_discovery import full_reports
+        for cycle in [3,4]:
+            writer.write(publish(full_reports(cycle)[2]));await writer.drain()
+        await asyncio.sleep(.05);await self.hass.async_block_till_done()
+        registry=entity_registry.async_get(self.hass)
+        row=next(r for r in entity_registry.async_entries_for_config_entry(registry,self.entry.entry_id) if r.unique_id=='123456789_EcoAc')
+        registry.async_update_entity(row.entity_id,disabled_by=entity_registry.RegistryEntryDisabler.USER)
+        self.assertTrue(await self.hass.config_entries.async_reload(self.entry.entry_id))
+        await self.hass.async_block_till_done()
+        self.assertEqual(registry.async_get(row.entity_id).disabled_by,entity_registry.RegistryEntryDisabler.USER)
+        self.assertIsNone(self.hass.states.get(row.entity_id))
+
+    async def test_optional_entity_freshness_does_not_follow_core(self):
+        await self.setup_entry();_,writer=await self.connect()
+        await self.send_profile(writer,1);await self.send_profile(writer,2)
+        device=self.entry.runtime_data.device
+        later=device._sample_time+91
+        device._clock=lambda:later
+        device.discovery.check_freshness()
+        # Feed core only at the later clock, keeping the actual UPS online.
+        writer.write(publish(report(cycle=3,start=102,values={102:99}))+publish(report(cycle=3,start=140,values={140:26,142:68,144:0,146:276}))+publish(report(cycle=3,start=1300,values={1314:2383})))
+        await writer.drain();await asyncio.sleep(.05);await self.hass.async_block_till_done()
+        self.assertEqual(self.hass.states.get('sensor.test_ups_tempo_rimanente_stimato').state,'unavailable')
+        self.assertEqual(self.hass.states.get('sensor.test_ups_batteria').state,'99')

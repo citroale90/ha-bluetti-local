@@ -142,11 +142,12 @@ def remaining_length(value):
 
 class Protocol:
     """Vendor prelude plus the transport subset needed for unsolicited reports."""
-    def __init__(self, on_sample, epoch=None, expected_iot=None, expected_serial=None, *, on_output_status=None):
+    def __init__(self, on_sample, epoch=None, expected_iot=None, expected_serial=None, *, on_output_status=None, on_report=None):
         self.buffer = bytearray()
         self.samples = Samples()
         self.on_sample = on_sample
         self.on_output_status = on_output_status
+        self.on_report = on_report
         self.output_samples = Samples(fields=OUTPUT_FIELD_MAP, decoder=decode_output_report)
         self.epoch = epoch or bootstrap_time
         self.expected_iot = expected_iot
@@ -289,6 +290,8 @@ class Protocol:
                     status = self.output_samples.receive(body[position:])
                     if status is not None:
                         self.on_output_status(status)
+                if self.on_report is not None:
+                    self.on_report(body[position:])
             elif kind == 12 and flags == 0 and not body and self.mqtt_seen:
                 replies.append(b'\xd0\x00')
             elif kind == 14 and flags == 0 and not body:

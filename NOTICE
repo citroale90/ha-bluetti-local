@@ -17,3 +17,9 @@ Background protocol research for a different device, the AC300:
 https://tvdr.de/bluetti-monitor/
 The EL30V2 framing, register mapping and direct MQTT handshake were independently
 validated with an owner's device. No code from that AC300 implementation is included.
+
+EL30V2 readable register addresses, formats and enum values were cross-checked
+with the MIT-licensed bluetti-bt-lib model profile:
+https://github.com/Patrick762/bluetti-bt-lib/blob/main/bluetti_bt_lib/devices/el30v2.py
+The local profile decoder/discovery implementation is independent; no reference
+classes are copied and no Bluetooth library is required at runtime.
